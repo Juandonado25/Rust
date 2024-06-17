@@ -11,6 +11,7 @@ rand = "0.8.5"
 [dev-dependencies]
 ink_e2e = { version = "5.0.0" }
 
+
 [lib]
 path = "lib.rs"
 

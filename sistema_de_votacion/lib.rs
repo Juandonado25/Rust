@@ -4,7 +4,7 @@
 mod votacion {
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
-    use crate::rand
+    use rand::prelude::*;
 
     #[derive(scale::Decode, scale::Encode,Debug)]
     #[cfg_attr(
@@ -61,6 +61,7 @@ mod votacion {
     impl Persona{
         fn new(nombre:String, apellido:String, dni:u128)->Self{
             Self{nombre,apellido,dni}
+        }
     }
     enum Rol{
         Votante,
