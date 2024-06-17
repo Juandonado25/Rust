@@ -36,7 +36,29 @@ mod votacion {
             }
             aux
         }
+        pub fn es_bisiesto(&self) -> bool{
+            let aux:bool;
+            if &self.anio % 4 == 0{
+                if &self.anio % 100 == 0{
+                    if &self.anio % 400 == 0{
+                        aux = true;
+                    }else{
+                        aux = false;
+                    }
+                }else{
+                    aux = true;
+                }
+            }else{
+                aux = false;
+            }
+            aux
+        }
     }
+    #[derive(scale::Decode, scale::Encode,Debug)]
+    #[cfg_attr(
+        feature = "std",
+        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+    )]
     struct Eleccion{
         id:u8,
         inicio:Fecha,
@@ -47,13 +69,25 @@ mod votacion {
         cantidad_votos:u8,//A revisar
         cantidad_votantes:u8,
     }
-    #[derive(scale::Decode, scale::Encode,Debug)]
+    impl Eleccion{
+
+        #[ink{message}]
+        pub fn registar_usuario(&mut self, user:Persona){
+            //Temporal
+            let num = rand::thread_rng().gen_range(1..=2);
+            if num == 2 && self.candidatos.len()<8{
+                self.candidatos.push(Candidato::new(user))
+            }else{
+                self.votantes.push(Votante::new(user));
+            }
+        }
+    }
+    #[derive(scale::Decode, scale::Encode,Debug,Clone)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-
-    struct Persona{
+    )]    
+    pub struct Persona{
         nombre:String,
         apellido:String,
         dni:u128,
@@ -63,15 +97,19 @@ mod votacion {
             Self{nombre,apellido,dni}
         }
     }
-    enum Rol{
-        Votante,
-        Candidato,
-    }
-
+    #[derive(scale::Decode, scale::Encode,Debug)]
+    #[cfg_attr(
+        feature = "std",
+        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+    )]
     struct Votante{
         dato: Persona,
-        estado_del_voto:boolean,
-        rol:Rol,
+        estado_del_voto: bool,
+    }
+    impl Votante{
+        pub fn new(dato:Persona)->Self{
+            Self{dato,estado_del_voto:false}
+        }
     }
     #[derive(scale::Decode, scale::Encode,Debug)]
     #[cfg_attr(
@@ -80,25 +118,24 @@ mod votacion {
     )]
     struct Candidato{
         dato: Persona,
-        rol:Rol,
         cant_votos:u8,
+    }
+    impl Candidato{
+        pub fn new(dato:Persona)->Self{
+            Self{dato,cant_votos:0}
+        }
     }
     #[ink(storage)]
     pub struct Votacion {
         votaciones:Vec<Eleccion>,
     }
     impl Votacion {
-        /// Constructor
+        // Constructor
         #[ink(constructor)]
         pub fn new() -> Self {
             Self { 
                 votaciones:Vec::new(),
             }
-        }
-
-        #[ink{message}]
-        pub registar_usuario($mut self, user:&Persona){
-
         }
     }
 }
