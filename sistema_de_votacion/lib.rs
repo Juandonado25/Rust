@@ -2,11 +2,13 @@
 
 #[ink::contract]
 mod votacion {
+    use core::default;
+
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
     use rand::prelude::*;
 
-    #[derive(scale::Decode, scale::Encode,Debug)]
+    #[derive(scale::Decode, scale::Encode,Debug,Default)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
@@ -54,7 +56,7 @@ mod votacion {
             aux
         }
     }
-    #[derive(scale::Decode, scale::Encode,Debug)]
+    #[derive(scale::Decode, scale::Encode,Debug,Default)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
@@ -70,7 +72,6 @@ mod votacion {
         cantidad_votantes:u8,
     }
     impl Eleccion{
-
         #[ink{message}]
         pub fn registar_usuario(&mut self, user:Persona){
             //Temporal
