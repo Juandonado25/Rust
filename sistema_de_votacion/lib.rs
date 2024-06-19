@@ -1,11 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
-
+#[allow(clippy::arithmetic_side_effects)]
 #[ink::contract]
 mod votacion {
-
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
-    use rand::prelude::*;
 
     #[derive(scale::Decode, scale::Encode,Debug,Default)]
     #[cfg_attr(
@@ -19,22 +17,21 @@ mod votacion {
     }
     impl Fecha{
         pub fn es_fecha_valida(&self) -> bool{//probar con varios
-            let aux:bool;
-            match self.mes {
-                1 => aux = if self.dia>0 && self.dia<=31{true} else {false},
-                2 => aux = if(!self.es_bisiesto() && self.dia>0 && self.dia<=28) || (self.es_bisiesto() && self.dia>0 && self.dia<=29){true} else {false},
-                3 => aux = if self.dia>0 && self.dia<=31{true} else {false},
-                4 => aux = if self.dia>0 && self.dia<=30{true} else {false},
-                5 => aux = if self.dia>0 && self.dia<=31{true} else {false},
-                6 => aux = if self.dia>0 && self.dia<=30{true} else {false},
-                7 => aux = if self.dia>0 && self.dia<=31{true} else {false},
-                8 => aux = if self.dia>0 && self.dia<=31{true} else {false},
-                9 => aux = if self.dia>0 && self.dia<=30{true} else {false},
-                10 => aux = if self.dia>0 && self.dia<=31{true} else {false},
-                11 => aux = if self.dia>0 && self.dia<=30{true} else {false},
-                12 => aux = if self.dia>0 && self.dia<=31{true} else {false},
-                _ => aux = false,
-            }
+            let aux:bool = match self.mes {
+                1 => self.dia>0 && self.dia<=31,
+                2 => (!self.es_bisiesto() && self.dia>0 && self.dia<=28) || (self.es_bisiesto() && self.dia>0 && self.dia<=29),
+                3 => self.dia>0 && self.dia<=31,
+                4 => self.dia>0 && self.dia<=30,
+                5 => self.dia>0 && self.dia<=31,
+                6 => self.dia>0 && self.dia<=30,
+                7 => self.dia>0 && self.dia<=31,
+                8 => self.dia>0 && self.dia<=31,
+                9 => self.dia>0 && self.dia<=30,
+                10 => self.dia>0 && self.dia<=31,
+                11 => self.dia>0 && self.dia<=30,
+                12 => self.dia>0 && self.dia<=31,
+                _ => false,
+            };
             aux
         }
         pub fn es_bisiesto(&self) -> bool{
@@ -73,8 +70,7 @@ mod votacion {
 
     impl Votacion{
         pub fn new(id:u8, inicio:Fecha, fin:Fecha)->Self{
-            let en_blanco = Candidato::new(Persona::new("En blanco".to_string(), "".to_string(), 0));
-            Self{id,inicio,fin,abierta:false,usuarios_registrados:Vec::new(), votantes:Vec::new(),candidatos:vec![en_blanco]}
+            Self{id,inicio,fin,abierta:false,usuarios_registrados:Vec::new(), votantes:Vec::new(),candidatos:Vec::new()}
         }
         pub fn agregar_usuario(&mut self, user:Persona){
             self.usuarios_registrados.push(user)
@@ -138,9 +134,9 @@ mod votacion {
         }
 
         #[ink(message)]
-        pub fn crear_Votacion(&mut self,id:u8,inicio:Fecha, fin:Fecha){
+        pub fn crear_votacion(&mut self,id:u8,inicio:Fecha, fin:Fecha){
             let id=self.votaciones.len() as u8 +1;
-            let mut elec = Votacion::new(id, inicio, fin);
+            let  elec = Votacion::new(id, inicio, fin);
             self.votaciones.push(elec);
         }
         fn existe_votacion(&self,id:u8)->bool{
@@ -197,20 +193,6 @@ mod votacion {
                 return true;
             }
             false
-        }
-
-        #[ink(message)]
-        pub fn votar(&mut self, id:u8){
-            if self.existe_votacion(id)&&!self.verificar_estado_votacion(id){
-                let votacion=self.votaciones.get_mut(id as usize -1).unwrap();
-                for e in votacion.votantes.iter_mut(){
-                    e.estado_del_voto=true;
-                    let mut rng = rand::thread_rng();
-                    let numero_aleatorio = rng.gen_range(0..=votacion.candidatos.len()-1);
-                    let candidato = votacion.candidatos.get_mut(numero_aleatorio).unwrap();
-                    candidato.cant_votos+=1;
-                }
-            }
         }
         
     }
