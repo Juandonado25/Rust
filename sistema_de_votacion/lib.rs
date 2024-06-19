@@ -1,11 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 
 #[ink::contract]
-mod votacion {
-
+mod sistema_de_votacion {
+    use usuario::UsuarioRef;
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
-    use rand::prelude::*;
 
     #[derive(scale::Decode, scale::Encode,Debug,Default)]
     #[cfg_attr(
@@ -61,53 +60,47 @@ mod votacion {
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
     )]
     struct Votacion{
-        id:u8,
         inicio:Fecha,
         fin:Fecha,
         abierta:bool,
-        usuarios_registrados:Vec<Persona>,
-        //indice_auxiliar_usuarios:u8,
         votantes:Vec<Votante>,
         candidatos:Vec<Candidato>,
     }
 
     impl Votacion{
-        pub fn new(id:u8, inicio:Fecha, fin:Fecha)->Self{
-            let en_blanco = Candidato::new(Persona::new("En blanco".to_string(), "".to_string(), 0));
-            Self{id,inicio,fin,abierta:false,usuarios_registrados:Vec::new(), votantes:Vec::new(),candidatos:vec![en_blanco]}
-        }
-        pub fn agregar_usuario(&mut self, user:Persona){
-            self.usuarios_registrados.push(user)
+        pub fn new(inicio:Fecha, fin:Fecha)->Self{
+            Self{inicio,fin,abierta:false, votantes:Vec::new(),candidatos:Vec::new()}
         }
     }
 
-    #[derive(scale::Decode, scale::Encode,Debug,Clone,Default)]
+    #[derive(scale::Decode, scale::Encode,Debug)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]    
-    pub struct Persona{
+    )]
+    struct datos_usuario{
         nombre:String,
         apellido:String,
-        dni:u128,
+        dni:String,
     }
-    impl Persona{
-        fn new(nombre:String, apellido:String, dni:u128)->Self{
+    impl datos_usuario{
+        fn new(nombre:String,apellido:String,dni:String)->Self{
             Self{nombre,apellido,dni}
         }
     }
+
     #[derive(scale::Decode, scale::Encode,Debug)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
     )]
     struct Votante{
-        dato: Persona,
+        datos: datos_usuario,
         estado_del_voto: bool,
     }
     impl Votante{
-        pub fn new(dato:Persona)->Self{
-            Self{dato,estado_del_voto:false}
+        pub fn new(datos:datos_usuario)->Self{
+            Self{datos,estado_del_voto:false}
         }
     }
     #[derive(scale::Decode, scale::Encode,Debug)]
@@ -116,14 +109,15 @@ mod votacion {
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
     )]
     struct Candidato{
-        dato: Persona,
+        datos: datos_usuario,
         cant_votos:u8,
     }
     impl Candidato{
-        pub fn new(dato:Persona)->Self{
-            Self{dato,cant_votos:0}
+        pub fn new(datos:datos_usuario)->Self{
+            Self{datos,cant_votos:0}
         }
     }
+    
     #[ink(storage)]
     pub struct Administracion {
         votaciones:Vec<Votacion>,
@@ -140,7 +134,7 @@ mod votacion {
         #[ink(message)]
         pub fn crear_Votacion(&mut self,id:u8,inicio:Fecha, fin:Fecha){
             let id=self.votaciones.len() as u8 +1;
-            let mut elec = Votacion::new(id, inicio, fin);
+            let mut elec = Votacion::new(inicio, fin);
             self.votaciones.push(elec);
         }
         fn existe_votacion(&self,id:u8)->bool{
@@ -198,31 +192,5 @@ mod votacion {
             }
             false
         }
-
-        #[ink(message)]
-        pub fn votar(&mut self, id:u8){
-            if self.existe_votacion(id)&&!self.verificar_estado_votacion(id){
-                let votacion=self.votaciones.get_mut(id as usize -1).unwrap();
-                for e in votacion.votantes.iter_mut(){
-                    e.estado_del_voto=true;
-                    let mut rng = rand::thread_rng();
-                    let numero_aleatorio = rng.gen_range(0..=votacion.candidatos.len()-1);
-                    let candidato = votacion.candidatos.get_mut(numero_aleatorio).unwrap();
-                    candidato.cant_votos+=1;
-                }
-            }
-        }
-        
     }
 }
-/*
-    Preguntas:
-    1.Como validar el usuario? consultar metodo "agregar_usuario" 
-    2. Como asignarle un rol a los usuarios? indice auxiliar?
-    3. Como hacer que voten? Consultar metodo "votar"
-*/
-    
-/*
-    Notas:
-    -No contar voto en blancco(Posicion 0)
-*/
