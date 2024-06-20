@@ -4,6 +4,7 @@
 mod votacion {
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
+    use scale_info::prelude::vec;
 
     #[derive(scale::Decode, scale::Encode,Debug,Default)]
     #[cfg_attr(
@@ -65,7 +66,7 @@ mod votacion {
         inicio:Fecha,
         fin:Fecha,
         abierta:bool,
-        participantes:Vec<Persona>,
+        participantes:Vec<Persona>,//Vector con los usuarios aspirantes a participar de alguno de los roles en la eleccion.
         votantes:Vec<Votante>,
         candidatos:Vec<Candidato>,
     }
@@ -99,7 +100,10 @@ mod votacion {
     )]
     struct Usuario{
         datos:Persona,
-        participacion:Vec<bool>,
+        participacion:Vec<bool>,//vector usado para controlar si la persona esta participando de una eleccion, 
+                                //debido a que el id de la eleccion se corresponde con su posicion en el vector, este seria contendria las misma longitud,
+                                //si es true participa en esa eleccion, false si no. por ejemplo si pos1=true participa en la eleccion de id 1.
+                                //lo hacemos para no inscribir mas de una vez al usuario en una misma eleccion,
     }
     impl Usuario{
         fn new(nombre:String, apellido:String, dni:String, longitud:u8)->Self{
@@ -113,7 +117,7 @@ mod votacion {
     )]
     struct Votante{
         dato: Persona,
-        estado_del_voto: bool,
+        estado_del_voto: bool,//para controlar si ya voto.
     }
     impl Votante{
         pub fn new(dato:Persona)->Self{
@@ -135,11 +139,11 @@ mod votacion {
         }
     }
     #[ink(storage)]
-    pub struct Administracion {
-        usuarios_registrados:Vec<Usuario>,
+    pub struct SistemaDeVotacion{
+        usuarios_registrados:Vec<Usuario>,//todos los usuarios regitrados en el sistema, pueden participar de una elecion o no
         elecciones:Vec<Eleccion>,
     }
-    impl Administracion {
+    impl SistemaDeVotacion {
         // Constructor
         #[ink(constructor)]
         pub fn new() -> Self {
@@ -149,6 +153,8 @@ mod votacion {
             }
         }
         
+        //METODOS ADMINISTRADOR
+
         //Crea una eleccion y la pushea en la structura principal, el id de cada eleccion es la posicion en el vector +1.
         #[ink(message)]
         pub fn crear_eleccion(&mut self,dia_inicio:u16,mes_inicio:u16,anio_inicio:u16,dia_fin:u16,mes_fin:u16,anio_fin:u16 ){
@@ -156,31 +162,6 @@ mod votacion {
             self.elecciones.push(elec);
             for e in self.usuarios_registrados.iter_mut(){
                 e.participacion.push(false);
-            }
-        }
-
-        
-        #[ink(message)]
-        pub fn crear_ususario(&mut self, nombre:String, apellido:String, dni:String){
-            let usuario = Usuario::new(nombre, apellido, dni, self.elecciones.len() as u8);
-            self.usuarios_registrados.push(usuario);
-        }
-        
-        //si es_votante es true lo inscribe como votante, en caso contrario como candidato y ademas cambia a true
-        // la participacion del usuario en dicha eleccion para que no pueda inscribirse 2 veces en la misma eleccion.
-        #[ink(message)]
-        pub fn postulacion_de_ususario(&mut self, id_usuario:u8, id_eleccion:u8, es_votante:bool){
-            if self.existe_eleccion(id_eleccion) && self.existe_ususario(id_usuario) && self.verificar_estado_eleccion(id_eleccion){
-                let eleccion = self.elecciones.get_mut(id_eleccion as usize -1).unwrap();
-                let usuario = self.usuarios_registrados.get_mut(id_usuario as usize -1).unwrap();
-                if usuario.participacion[id_eleccion as usize]==false{
-                    if es_votante{
-                        eleccion.votantes.push(Votante::new(usuario.clone().datos));
-                    }else{
-                        eleccion.candidatos.push(Candidato::new(usuario.clone().datos));
-                    }
-                    self.usuarios_registrados[id_usuario as usize -1].participacion[id_eleccion as usize -1] = true;
-                }
             }
         }
 
@@ -240,7 +221,32 @@ mod votacion {
             }
             false
         }
+
+        //METODOS DE USUARIO
         
+        #[ink(message)]
+        pub fn crear_ususario(&mut self, nombre:String, apellido:String, dni:String){
+            let usuario = Usuario::new(nombre, apellido, dni, self.elecciones.len() as u8);
+            self.usuarios_registrados.push(usuario);
+        }
+        
+        //si es_votante es true lo inscribe como votante, en caso contrario como candidato y ademas cambia a true
+        // la participacion del usuario en dicha eleccion para que no pueda inscribirse 2 veces en la misma eleccion.
+        #[ink(message)]
+        pub fn postulacion_de_ususario(&mut self, id_usuario:u8, id_eleccion:u8, es_votante:bool){
+            if self.existe_eleccion(id_eleccion) && self.existe_ususario(id_usuario) && self.verificar_estado_eleccion(id_eleccion){
+                let eleccion = self.elecciones.get_mut(id_eleccion as usize -1).unwrap();
+                let usuario = self.usuarios_registrados.get_mut(id_usuario as usize -1).unwrap();
+                if usuario.participacion[id_eleccion as usize]==false{
+                    if es_votante{
+                        eleccion.votantes.push(Votante::new(usuario.clone().datos));
+                    }else{
+                        eleccion.candidatos.push(Candidato::new(usuario.clone().datos));
+                    }
+                    self.usuarios_registrados[id_usuario as usize -1].participacion[id_eleccion as usize -1] = true;
+                }
+            }
+        }
     }
 }
 /*
