@@ -6,7 +6,7 @@ mod votacion {
     use ink::prelude::vec::Vec;
     use scale_info::prelude::vec;
 
-    #[derive(scale::Decode, scale::Encode,Debug,Default)]
+    #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
@@ -57,12 +57,13 @@ mod votacion {
             aux
         }
     }
-    #[derive(scale::Decode, scale::Encode,Debug,Default)]
+    #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
     )]
-    struct Eleccion{
+    pub struct Eleccion{
+        cargo:String,//se detalla el cargo que sera elegido en esta eleccion, informacion que puede ser relevante para el reporte.
         inicio:Fecha,
         fin:Fecha,
         abierta:bool,
@@ -72,8 +73,8 @@ mod votacion {
     }
 
     impl Eleccion{
-        pub fn new(inicio:Fecha, fin:Fecha)->Self{
-            Self{inicio,fin,abierta:false,participantes:Vec::new() ,votantes:Vec::new(),candidatos:Vec::new()}
+        pub fn new(cargo:String,inicio:Fecha, fin:Fecha)->Self{
+            Self{cargo,inicio,fin,abierta:false,participantes:Vec::new() ,votantes:Vec::new(),candidatos:Vec::new()}
         }
     }
     #[derive(scale::Decode, scale::Encode,Debug,Clone,Default)]
@@ -110,7 +111,7 @@ mod votacion {
             Self{datos:Persona::new(nombre,apellido,dni),participacion:vec!{false;longitud as usize}}
         }
     }
-    #[derive(scale::Decode, scale::Encode,Debug)]
+    #[derive(scale::Decode, scale::Encode,Debug,Clone)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
@@ -124,7 +125,7 @@ mod votacion {
             Self{dato,estado_del_voto:false}
         }
     }
-    #[derive(scale::Decode, scale::Encode,Debug)]
+    #[derive(scale::Decode, scale::Encode,Debug,Clone)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
@@ -157,8 +158,8 @@ mod votacion {
 
         //Crea una eleccion y la pushea en la structura principal, el id de cada eleccion es la posicion en el vector +1.
         #[ink(message)]
-        pub fn crear_eleccion(&mut self,dia_inicio:u16,mes_inicio:u16,anio_inicio:u16,dia_fin:u16,mes_fin:u16,anio_fin:u16 ){
-            let elec = Eleccion::new(Fecha::new(dia_inicio,mes_inicio,anio_inicio),Fecha::new(dia_fin,mes_fin,anio_fin));
+        pub fn crear_eleccion(&mut self,cargo:String,dia_inicio:u16,mes_inicio:u16,anio_inicio:u16,dia_fin:u16,mes_fin:u16,anio_fin:u16 ){
+            let elec = Eleccion::new(cargo,Fecha::new(dia_inicio,mes_inicio,anio_inicio),Fecha::new(dia_fin,mes_fin,anio_fin));
             self.elecciones.push(elec);
             for e in self.usuarios_registrados.iter_mut(){
                 e.participacion.push(false);
@@ -222,6 +223,27 @@ mod votacion {
             false
         }
 
+        //Devuelve una eleccion, util para el reporte.
+        #[ink(message)]
+        pub fn get_eleccion(&self, eleccion_id:u8)->Option<Eleccion>{
+            if eleccion_id!=0 && eleccion_id>=self.elecciones.len() as u8{
+                let elec = self.elecciones.get(eleccion_id as usize -1).unwrap();
+                return Some(elec.clone())
+            }
+            None
+        }
+
+        //Devuelve los datos de una eleccion, solo si esta esta cerrada.
+        //debatir sobre si necesita el bool de finalizada para que pueda emitir resultados verdaderos porque puede no haber comenzado siquiera.
+        // #[ink(message)]
+        // pub fn get_resultados(&self, eleccion_id:u8)->Option<Eleccion>{
+        //     if eleccion_finalizada(eleccion_id) && eleccion_id!=0 && eleccion_id>=self.elecciones.len() as u8{
+        //         let elec = self.elecciones.get(eleccion_id as usize -1).unwrap();
+        //         return Some(elec.clone())
+        //     }
+        //     None
+        // }
+
         //METODOS DE USUARIO
         
         #[ink(message)]
@@ -251,8 +273,10 @@ mod votacion {
 }
 /*
     Preguntas:
-
-    
+        1- para registrarse como candidato se debe pedir mas datos ademas de su info personal? como años de antiguedad en la empresa o cantidad de titulos obtenidos.
+        2- es necesario poner un minimo de candidatos? no tiene mucho sentido hacer una votacion con 1 solo candidato.
+        3- ponerle un bool "finalizada" a las elecciones? la informacion "abierta o cerrada" no aporta informacion sobre si es una eleccion que esta cerrada porque 
+           no se ha comenzado y no tiene resultados o ya finalizo y tiene resultados.
 */
     
 /*
