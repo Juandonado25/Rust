@@ -7,7 +7,7 @@ pub mod sistema_de_votacion {
     use ink::prelude::vec::Vec;
     use scale_info::prelude::vec;
 
-    #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
+    #[derive(scale::Decode, scale::Encode,Debug,Default,Clone,Copy)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
@@ -76,8 +76,8 @@ pub mod sistema_de_votacion {
     }
 
     impl Eleccion{
-        pub fn new(cargo:String,inicio:Fecha, fin:Fecha)->Self{
-            Self{cargo,inicio,fin,abierta:false,postulados_a_votantes:Vec::new(),postulados_a_candidatos:Vec::new(), finalizada:false ,votantes:Vec::new(),candidatos:Vec::new()}
+        pub fn new(cargo:String,inicio:&Fecha, fin:&Fecha)->Self{
+            Self{cargo,inicio:*inicio,fin:*fin,abierta:false,postulados_a_votantes:Vec::new(),postulados_a_candidatos:Vec::new(), finalizada:false ,votantes:Vec::new(),candidatos:Vec::new()}
         }
     }
     #[derive(scale::Decode, scale::Encode,Debug,Clone,Default,PartialEq)]
@@ -163,10 +163,14 @@ pub mod sistema_de_votacion {
         //Crea una eleccion y la pushea en la structura principal, el id de cada eleccion es la posicion en el vector +1.
         #[ink(message)]
         pub fn crear_eleccion(&mut self,cargo:String,dia_inicio:u16,mes_inicio:u16,anio_inicio:u16,dia_fin:u16,mes_fin:u16,anio_fin:u16 ){
-            let elec = Eleccion::new(cargo,Fecha::new(dia_inicio,mes_inicio,anio_inicio),Fecha::new(dia_fin,mes_fin,anio_fin));
-            self.elecciones.push(elec);
-            for e in self.usuarios_registrados.iter_mut(){
-                e.participacion.push(false);
+            let fecha_de_inicio = Fecha::new(dia_inicio,mes_inicio,anio_inicio);
+            let fecha_de_fin = Fecha::new(dia_fin,mes_fin,anio_fin);
+            if fecha_de_inicio.es_fecha_valida() && fecha_de_fin.es_fecha_valida(){
+                let elec = Eleccion::new(cargo,&fecha_de_inicio,&fecha_de_fin);
+                self.elecciones.push(elec);
+                for e in self.usuarios_registrados.iter_mut(){
+                    e.participacion.push(false);
+                }
             }
         }
 
