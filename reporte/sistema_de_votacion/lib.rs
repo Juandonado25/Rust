@@ -57,6 +57,17 @@ pub mod sistema_de_votacion {
             }
             aux
         }
+        pub fn es_mayor(&self, f:Fecha) -> bool{
+            let mut b:bool = false;
+            if f.anio >= self.anio{
+                if f.mes >= self.mes{
+                    if f.dia > self.dia{
+                        b = true;
+                    }
+                }
+            }
+            b
+        }
     }
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
@@ -165,7 +176,7 @@ pub mod sistema_de_votacion {
         pub fn crear_eleccion(&mut self,cargo:String,dia_inicio:u16,mes_inicio:u16,anio_inicio:u16,dia_fin:u16,mes_fin:u16,anio_fin:u16 )->bool{
             let fecha_de_inicio = Fecha::new(dia_inicio,mes_inicio,anio_inicio);
             let fecha_de_fin = Fecha::new(dia_fin,mes_fin,anio_fin);
-            if fecha_de_inicio.es_fecha_valida() && fecha_de_fin.es_fecha_valida(){
+            if fecha_de_inicio.es_fecha_valida() && fecha_de_fin.es_fecha_valida()&& fecha_de_inicio.es_mayor(fecha_de_fin){
                 let elec = Eleccion::new(cargo,&fecha_de_inicio,&fecha_de_fin);
                 self.elecciones.push(elec);
                 for e in self.usuarios_registrados.iter_mut(){
@@ -185,7 +196,7 @@ pub mod sistema_de_votacion {
             }
         }
 
-        fn existe_ususario(&self,id:u8)->bool{
+        fn existe_usuario(&self,id:u8)->bool{
             if id==0{
                 false
             }
@@ -243,7 +254,7 @@ pub mod sistema_de_votacion {
         //Devuelve una eleccion, util para el reporte.
         #[ink(message)]
         pub fn get_eleccion(&self, eleccion_id:u8)->Option<Eleccion>{
-            if eleccion_id!=0 && eleccion_id>=self.elecciones.len() as u8{
+            if eleccion_id!=0 && eleccion_id<=self.elecciones.len() as u8{
                 let elec = self.elecciones.get(eleccion_id as usize -1).unwrap();
                 return Some(elec.clone())
             }
@@ -251,9 +262,10 @@ pub mod sistema_de_votacion {
         }
 
         //retorna true si se pudo validar con exito, false en caso contrario.
+        //Valida solo si el usuario esta postulado para esa eleccion.
         #[ink(message)]
         pub fn validar_usuario(&mut self, id_usuario:u8, id_eleccion:u8, valido:bool)->bool{
-            if self.existe_eleccion(id_eleccion) && self.existe_ususario(id_usuario) && valido && self.eleccion_no_empezada(id_eleccion) 
+            if self.existe_eleccion(id_eleccion) && self.existe_usuario(id_usuario) && valido && self.eleccion_no_empezada(id_eleccion) 
             && self.usuarios_registrados[id_usuario as usize].participacion[id_eleccion as usize]{
                 let vot = Votante::new(self.usuarios_registrados[id_usuario as usize].datos.clone());
                 let eleccion = self.elecciones.get_mut(id_eleccion as usize -1).unwrap();
@@ -305,7 +317,7 @@ pub mod sistema_de_votacion {
         //METODOS DE USUARIO
         
         #[ink(message)]
-        pub fn crear_ususario(&mut self, nombre:String, apellido:String, dni:String){
+        pub fn crear_usuario(&mut self, nombre:String, apellido:String, dni:String){
             let usuario = Usuario::new(nombre, apellido, dni, self.elecciones.len() as u8);
             self.usuarios_registrados.push(usuario);
         }
@@ -313,8 +325,8 @@ pub mod sistema_de_votacion {
         //si es_votante es true lo inscribe como votante, en caso contrario como candidato y ademas cambia a true
         // la participacion del usuario en dicha eleccion para que no pueda inscribirse 2 veces en la misma eleccion.
         #[ink(message)]
-        pub fn postulacion_de_ususario(&mut self, id_usuario:u8, id_eleccion:u8, es_votante:bool)->bool{
-            if self.existe_eleccion(id_eleccion) && self.existe_ususario(id_usuario) && self.eleccion_no_empezada(id_eleccion){
+        pub fn postulacion_de_usuario(&mut self, id_usuario:u8, id_eleccion:u8, es_votante:bool)->bool{
+            if self.existe_eleccion(id_eleccion) && self.existe_usuario(id_usuario) && self.eleccion_no_empezada(id_eleccion){
                 let eleccion = self.elecciones.get_mut(id_eleccion as usize -1).unwrap();
                 let usuario = self.usuarios_registrados.get_mut(id_usuario as usize -1).unwrap();
                 if usuario.participacion[id_eleccion as usize]==false{
@@ -350,7 +362,6 @@ pub mod sistema_de_votacion {
         1- para registrarse como candidato se debe pedir mas datos ademas de su info personal? como años de antiguedad en la empresa o cantidad de titulos obtenidos.
         
     Preguntas del deploy:
-        1- El metodo crear_eleccion acertadamente no agrega la eleccion si la fecha no es valida, pero el contract deberia mostrarte directamente que no se puede hacer. Panic?
 
 
     Notas:
