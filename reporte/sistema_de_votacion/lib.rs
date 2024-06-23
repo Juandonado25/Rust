@@ -244,9 +244,11 @@ pub mod sistema_de_votacion {
         pub fn finalizar_eleccion(&mut self,id:u8)->bool{
             if self.existe_eleccion(id){
                 let eleccion=self.elecciones.get_mut(id as usize -1).unwrap();
-                eleccion.abierta=false;
-                eleccion.finalizada=true;
-                return true;
+                if eleccion.abierta==true{
+                    eleccion.abierta=false;
+                    eleccion.finalizada=true;
+                    return true;
+                }
             }
             false
         }
@@ -286,7 +288,7 @@ pub mod sistema_de_votacion {
 
         #[ink(message)]
         pub fn get_usuario(&self, id_usuario:u8)->Option<Usuario>{
-            if id_usuario>=self.usuarios_registrados.len() as u8{
+            if id_usuario<=self.usuarios_registrados.len() as u8{
                 return Some(self.usuarios_registrados.get(id_usuario as usize -1).unwrap().clone());
             }
             None
