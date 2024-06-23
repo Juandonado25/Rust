@@ -102,7 +102,7 @@ pub mod sistema_de_votacion {
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
     )]
-    struct Usuario{
+    pub struct Usuario{
         datos:Persona,
         participacion:Vec<bool>,//vector usado para controlar si la persona esta participando de una eleccion, 
                                 //debido a que el id de la eleccion se corresponde con su posicion en el vector, este seria contendria las misma longitud,
@@ -272,6 +272,24 @@ pub mod sistema_de_votacion {
             false
         }
 
+        #[ink(message)]
+        pub fn get_usuario(&self, id_usuario:u8)->Option<Usuario>{
+            if id_usuario>=self.usuarios_registrados.len() as u8{
+                return Some(self.usuarios_registrados.get(id_usuario as usize -1).unwrap().clone());
+            }
+            None
+        }
+
+        #[ink(message)]
+        pub fn get_usuarios_registrados(&self)-> Vec<Usuario>{
+            self.usuarios_registrados.clone()
+        }
+
+        #[ink(message)]
+        pub fn get_todas_las_elecciones(&self)-> Vec<Eleccion>{
+            self.elecciones.clone()
+        }
+
         // Devuelve los datos de una eleccion, solo si esta esta cerrada y finalizada.
         #[ink(message)]
         pub fn get_reporte_de_eleccion(&self, id_eleccion:u8)->Option<Eleccion>{
@@ -328,11 +346,13 @@ pub mod sistema_de_votacion {
     }
 }
 /*
-    Preguntas:
+    Preguntas del planteamiento:
         1- para registrarse como candidato se debe pedir mas datos ademas de su info personal? como años de antiguedad en la empresa o cantidad de titulos obtenidos.
-*/
-    
-/*
+        
+    Preguntas del deploy:
+        1- El metodo crear_eleccion acertadamente no agrega la eleccion si la fecha no es valida, pero el contract deberia mostrarte directamente que no se puede hacer. Panic?
+
+
     Notas:
         !- Tener en cuenta que si la eleccion tiene un solo candidato no se va a poder inicializar y 
         en el reporte se marcara como ganador al unico candidato. si no existe ningun candidato retornara eleccion invalida.
