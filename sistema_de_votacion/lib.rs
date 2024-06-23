@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 #[allow(clippy::arithmetic_side_effects)]
 #[ink::contract]
-mod votacion {
+mod sistema_de_votacion {
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
     use scale_info::prelude::vec;
@@ -67,17 +67,19 @@ mod votacion {
         inicio:Fecha,
         fin:Fecha,
         abierta:bool,
-        participantes:Vec<Persona>,//Vector con los usuarios aspirantes a participar de alguno de los roles en la eleccion.
+        finalizada:bool, //sirve para saber si esta cerrada porque finalizo o nunca empezo.
+        postulados_a_votantes:Vec<Votante>,
         votantes:Vec<Votante>,
+        postulados_a_candidatos:Vec<Candidato>,
         candidatos:Vec<Candidato>,
     }
 
     impl Eleccion{
         pub fn new(cargo:String,inicio:Fecha, fin:Fecha)->Self{
-            Self{cargo,inicio,fin,abierta:false,participantes:Vec::new() ,votantes:Vec::new(),candidatos:Vec::new()}
+            Self{cargo,inicio,fin,abierta:false,postulados_a_votantes:Vec::new(),postulados_a_candidatos:Vec::new(), finalizada:false ,votantes:Vec::new(),candidatos:Vec::new()}
         }
     }
-    #[derive(scale::Decode, scale::Encode,Debug,Clone,Default)]
+    #[derive(scale::Decode, scale::Encode,Debug,Clone,Default,PartialEq)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
@@ -88,7 +90,7 @@ mod votacion {
         dni:String,
 
     }
-/////////////////A revisar inicializacion del vector
+
     impl Persona{
         fn new(nombre:String, apellido:String, dni:String)->Self{
             Self{nombre,apellido,dni}
@@ -106,12 +108,13 @@ mod votacion {
                                 //si es true participa en esa eleccion, false si no. por ejemplo si pos1=true participa en la eleccion de id 1.
                                 //lo hacemos para no inscribir mas de una vez al usuario en una misma eleccion,
     }
+/////////////////A revisar inicializacion del vector
     impl Usuario{
         fn new(nombre:String, apellido:String, dni:String, longitud:u8)->Self{
             Self{datos:Persona::new(nombre,apellido,dni),participacion:vec!{false;longitud as usize}}
         }
     }
-    #[derive(scale::Decode, scale::Encode,Debug,Clone)]
+    #[derive(scale::Decode, scale::Encode,Debug,Clone,PartialEq)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
@@ -125,7 +128,7 @@ mod votacion {
             Self{dato,estado_del_voto:false}
         }
     }
-    #[derive(scale::Decode, scale::Encode,Debug,Clone)]
+    #[derive(scale::Decode, scale::Encode,Debug,Clone,PartialEq)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
@@ -184,15 +187,15 @@ mod votacion {
             }
         }
 
-        //retorna true se puede inscribir un usuario a esa eleccion porque existe y esta cerrada.
-        fn verificar_estado_eleccion(&self,id:u8)->bool{
+        //retorna true se puede inscribir un usuario a esa eleccion porque existe esta cerrada y no finalizada.
+        fn eleccion_no_empezada(&self,id:u8)->bool{
             if id==0{
                 false
             }
             else{
                 if self.elecciones.len()>=id as usize {
                     let eleccion=self.elecciones.get(id as usize -1).unwrap();
-                    if eleccion.abierta==false{
+                    if eleccion.abierta==false && eleccion.finalizada==false{
                         true
                     }
                     else{
@@ -204,20 +207,27 @@ mod votacion {
                 }
             }
         }
+
+        //Si existe la eleccion y hay mas de un candidato la inicializa.
         #[ink(message)]
         pub fn iniciar_eleccion(&mut self,id:u8)->bool{
             if self.existe_eleccion(id){
                 let eleccion=self.elecciones.get_mut(id as usize -1).unwrap();
-                eleccion.abierta=true;
-                return true;
+                if eleccion.candidatos.len()>=2{
+                    eleccion.abierta=true;
+                    return true;
+                }
             }
             false
         }
+
+        //Cierra la eleccion y la marca como finalizada.
         #[ink(message)]
         pub fn finalizar_eleccion(&mut self,id:u8)->bool{
             if self.existe_eleccion(id){
                 let eleccion=self.elecciones.get_mut(id as usize -1).unwrap();
                 eleccion.abierta=false;
+                eleccion.finalizada=true;
                 return true;
             }
             false
@@ -233,16 +243,39 @@ mod votacion {
             None
         }
 
-        //Devuelve los datos de una eleccion, solo si esta esta cerrada.
-        //debatir sobre si necesita el bool de finalizada para que pueda emitir resultados verdaderos porque puede no haber comenzado siquiera.
-        // #[ink(message)]
-        // pub fn get_resultados(&self, eleccion_id:u8)->Option<Eleccion>{
-        //     if eleccion_finalizada(eleccion_id) && eleccion_id!=0 && eleccion_id>=self.elecciones.len() as u8{
-        //         let elec = self.elecciones.get(eleccion_id as usize -1).unwrap();
-        //         return Some(elec.clone())
-        //     }
-        //     None
-        // }
+        //retorna true si se pudo validar con exito, false en caso contrario.
+        #[ink(message)]
+        pub fn validar_usuario(&mut self, id_usuario:u8, id_eleccion:u8, valido:bool)->bool{
+            if self.existe_eleccion(id_eleccion) && self.existe_ususario(id_usuario) && valido && self.eleccion_no_empezada(id_eleccion) 
+            && self.usuarios_registrados[id_usuario as usize].participacion[id_eleccion as usize]{
+                let vot = Votante::new(self.usuarios_registrados[id_usuario as usize].datos.clone());
+                let eleccion = self.elecciones.get_mut(id_eleccion as usize -1).unwrap();
+                if let Some(position) = eleccion.postulados_a_votantes.iter().position(|x| *x == vot.clone()) {
+                    eleccion.postulados_a_votantes.remove(position);
+                    eleccion.votantes.push(vot);
+                } else {
+                    let can = Candidato::new(self.usuarios_registrados[id_usuario as usize].datos.clone());
+                    if let Some(position) = eleccion.postulados_a_candidatos.iter().position(|x| *x == can.clone()) {
+                        eleccion.candidatos.push(can);
+                        eleccion.postulados_a_candidatos.remove(position);
+                    }
+                }
+                return true;
+            }
+            false
+        }
+
+        // Devuelve los datos de una eleccion, solo si esta esta cerrada y finalizada.
+        #[ink(message)]
+        pub fn get_reporte_de_eleccion(&self, id_eleccion:u8)->Option<Eleccion>{
+            if self.existe_eleccion(id_eleccion){
+                let eleccion = self.elecciones.get(id_eleccion as usize -1).unwrap();
+                if eleccion.finalizada{
+                    return Some(eleccion.clone())
+                }
+            }
+            None
+        }
 
         //METODOS DE USUARIO
         
@@ -255,31 +288,45 @@ mod votacion {
         //si es_votante es true lo inscribe como votante, en caso contrario como candidato y ademas cambia a true
         // la participacion del usuario en dicha eleccion para que no pueda inscribirse 2 veces en la misma eleccion.
         #[ink(message)]
-        pub fn postulacion_de_ususario(&mut self, id_usuario:u8, id_eleccion:u8, es_votante:bool){
-            if self.existe_eleccion(id_eleccion) && self.existe_ususario(id_usuario) && self.verificar_estado_eleccion(id_eleccion){
+        pub fn postulacion_de_ususario(&mut self, id_usuario:u8, id_eleccion:u8, es_votante:bool)->bool{
+            if self.existe_eleccion(id_eleccion) && self.existe_ususario(id_usuario) && self.eleccion_no_empezada(id_eleccion){
                 let eleccion = self.elecciones.get_mut(id_eleccion as usize -1).unwrap();
                 let usuario = self.usuarios_registrados.get_mut(id_usuario as usize -1).unwrap();
                 if usuario.participacion[id_eleccion as usize]==false{
                     if es_votante{
-                        eleccion.votantes.push(Votante::new(usuario.clone().datos));
+                        eleccion.postulados_a_votantes.push(Votante::new(usuario.clone().datos));
                     }else{
-                        eleccion.candidatos.push(Candidato::new(usuario.clone().datos));
+                        eleccion.postulados_a_candidatos.push(Candidato::new(usuario.clone().datos));
                     }
                     self.usuarios_registrados[id_usuario as usize -1].participacion[id_eleccion as usize -1] = true;
+                    return true;
                 }
             }
+            false
+            
+        }
+
+        //el id_usuario es la posicion del votante en el vector de usuarios registrados en el sistema de votacion.
+        //el id_candidato es la posicion del candidato en el vector candidatos adentro de la eleccion.
+        #[ink(message)]
+        pub fn votar_canditato(&mut self, id_usuario:u8, id_eleccion:u8, id_candidato:u8)->bool{
+            let eleccion = self.elecciones.get_mut(id_eleccion as usize -1).unwrap();
+            let votante = Votante::new(self.usuarios_registrados[id_usuario as usize].datos.clone());
+            if eleccion.votantes.contains(&votante)&& (eleccion.candidatos.len() as u8 >= id_candidato){
+                eleccion.candidatos[id_candidato as usize].cant_votos += 1;
+                return true;
+            }
+            false
         }
     }
 }
 /*
     Preguntas:
         1- para registrarse como candidato se debe pedir mas datos ademas de su info personal? como años de antiguedad en la empresa o cantidad de titulos obtenidos.
-        2- es necesario poner un minimo de candidatos? no tiene mucho sentido hacer una votacion con 1 solo candidato.
-        3- ponerle un bool "finalizada" a las elecciones? la informacion "abierta o cerrada" no aporta informacion sobre si es una eleccion que esta cerrada porque 
-           no se ha comenzado y no tiene resultados o ya finalizo y tiene resultados.
 */
     
 /*
     Notas:
-    
+        !- Tener en cuenta que si la eleccion tiene un solo candidato no se va a poder inicializar y 
+        en el reporte se marcara como ganador al unico candidato. si no existe ningun candidato retornara eleccion invalida.
 */
