@@ -1,7 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 #[allow(clippy::arithmetic_side_effects)]
+pub use self::sistema_de_votacion::SistemaDeVotacionRef;
 #[ink::contract]
-mod sistema_de_votacion {
+pub mod sistema_de_votacion {
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
     use scale_info::prelude::vec;
@@ -119,7 +120,7 @@ mod sistema_de_votacion {
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
     )]
-    struct Votante{
+    pub struct Votante{
         dato: Persona,
         estado_del_voto: bool,//para controlar si ya voto.
     }
@@ -133,7 +134,7 @@ mod sistema_de_votacion {
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
     )]
-    struct Candidato{
+    pub struct Candidato{
         dato: Persona,
         cant_votos:u8,
     }
@@ -330,3 +331,15 @@ mod sistema_de_votacion {
         !- Tener en cuenta que si la eleccion tiene un solo candidato no se va a poder inicializar y 
         en el reporte se marcara como ganador al unico candidato. si no existe ningun candidato retornara eleccion invalida.
 */
+
+// #[cfg(test)]
+//     mod tests {
+//         use super::*;
+
+        
+//         #[ink::test]
+//         fn default_works() {
+//             let reporte = Reporte::default();
+//             assert_eq!(reporte.get(), false);
+//         }
+//     }
