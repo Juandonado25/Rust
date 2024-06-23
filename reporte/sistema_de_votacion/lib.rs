@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
 #![allow(clippy::arithmetic_side_effects)]
 pub use self::sistema_de_votacion::SistemaDeVotacionRef;
+use crate::sistema_de_votacion::SistemaDeVotacion;
 #[ink::contract]
 pub mod sistema_de_votacion {
     use ink::prelude::string::String;
@@ -503,253 +504,251 @@ pub mod sistema_de_votacion {
 */
 
 #[cfg(test)]
-    mod tests {
-        use super::*;
+    
 
-        #[ink::test]
-        fn test_crear_eleccion() {
-            let mut sistema = SistemaDeVotacion::_new();
-            let result = sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            assert!(result);
-            assert_eq!(sistema.elecciones.len(), 1);
-        }
+    #[ink::test]
+    fn test_crear_eleccion() {
+        let mut sistema = SistemaDeVotacion::new();
+        let result = sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        assert!(result);
+        assert_eq!(sistema.elecciones.len(), 1);
+    }
 
-        #[ink::test]
-        fn test_crear_eleccion_fecha_invalida() {
-            let mut sistema = SistemaDeVotacion::_new();
-            let result = sistema._crear_eleccion("Presidente".into(), 31, 2, 2024, 1, 3, 2024);
-            assert!(!result);
-            assert_eq!(sistema.elecciones.len(), 0);
-        }
+    #[ink::test]
+    fn test_crear_eleccion_fecha_invalida() {
+        let mut sistema = SistemaDeVotacion::new();
+        let result = sistema.crear_eleccion("Presidente".into(), 31, 2, 2024, 1, 3, 2024);
+        assert!(!result);
+        assert_eq!(sistema.elecciones.len(), 0);
+    }
 
-        #[ink::test]
-        fn test_existe_eleccion() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            let result = sistema.existe_eleccion(1);
-            assert!(result);
-        }
+    #[ink::test]
+    fn test_existe_eleccion() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        let result = sistema.existe_eleccion(1);
+        assert!(result);
+    }
 
-        #[ink::test]
-        fn test_existe_eleccion_inexistente() {
-            let sistema = SistemaDeVotacion::_new();
-            let result = sistema.existe_eleccion(1);
-            assert!(!result);
-        }
+    #[ink::test]
+    fn test_existe_eleccion_inexistente() {
+        let sistema = SistemaDeVotacion::new();
+        let result = sistema.existe_eleccion(1);
+        assert!(!result);
+    }
 
-        #[ink::test]
-        fn test_existe_usuario() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
-            let result = sistema.existe_usuario(1);
-            assert!(result);
-        }
+    #[ink::test]
+    fn test_existe_usuario() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
+        let result = sistema.existe_usuario(1);
+        assert!(result);
+    }
 
-        #[ink::test]
-        fn test_existe_usuario_inexistente() {
-            let sistema = SistemaDeVotacion::_new();
-            let result = sistema.existe_usuario(1);
-            assert!(!result);
-        }
+    #[ink::test]
+    fn test_existe_usuario_inexistente() {
+        let sistema = SistemaDeVotacion::new();
+        let result = sistema.existe_usuario(1);
+        assert!(!result);
+    }
 
-        #[ink::test]
-        fn test_eleccion_no_empezada() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            let result = sistema.eleccion_no_empezada(1);
-            assert!(result);
-        }
+    #[ink::test]
+    fn test_eleccion_no_empezada() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        let result = sistema.eleccion_no_empezada(1);
+        assert!(result);
+    }
 
-        #[ink::test]
-        fn test_eleccion_no_empezada_inexistente() {
-            let sistema = SistemaDeVotacion::_new();
-            let result = sistema.eleccion_no_empezada(1);
-            assert!(!result);
-        }
+    #[ink::test]
+    fn test_eleccion_no_empezada_inexistente() {
+        let sistema = SistemaDeVotacion::new();
+        let result = sistema.eleccion_no_empezada(1);
+        assert!(!result);
+    }
 
-        #[ink::test]
-        fn test_iniciar_eleccion() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            let result = sistema.iniciar_eleccion(1);
-            assert!(result);
-        }
+    #[ink::test]
+    fn test_iniciar_eleccion() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        let result = sistema.iniciar_eleccion(1);
+        assert!(result);
+    }
 
-        #[ink::test]
-        fn test_iniciar_eleccion_inexistente() {
-            let mut sistema = SistemaDeVotacion::_new();
-            let result = sistema._iniciar_eleccion(1);
-            assert!(!result);
-        }
+    #[ink::test]
+    fn test_iniciar_eleccion_inexistente() {
+        let mut sistema = SistemaDeVotacion::new();
+        let result = sistema.iniciar_eleccion(1);
+        assert!(!result);
+    }
 
-        #[ink::test]
-        fn test_finalizar_eleccion() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            sistema._iniciar_eleccion(1);
-            let result = sistema._finalizar_eleccion(1);
-            assert!(result);
-        }
+    #[ink::test]
+    fn test_finalizar_eleccion() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        sistema.iniciar_eleccion(1);
+        let result = sistema.finalizar_eleccion(1);
+        assert!(result);
+    }
 
-        #[ink::test]
-        fn test_finalizar_eleccion_inexistente() {
-            let mut sistema = SistemaDeVotacion::_new();
-            let result = sistema._finalizar_eleccion(1);
-            assert!(!result);
-        }
+    #[ink::test]
+    fn test_finalizar_eleccion_inexistente() {
+        let mut sistema = SistemaDeVotacion::new();
+        let result = sistema.finalizar_eleccion(1);
+        assert!(!result);
+    }
 
-        #[ink::test]
-        fn test_get_eleccion() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            let eleccion = sistema._get_eleccion(1);
-            assert!(eleccion.is_some());
-            assert_eq!(eleccion.unwrap().cargo, "Presidente");
-        }
+    #[ink::test]
+    fn test_get_eleccion() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        let eleccion = sistema.get_eleccion(1);
+        assert!(eleccion.is_some());
+        assert_eq!(eleccion.unwrap().cargo, "Presidente");
+    }
 
-        #[ink::test]
-        fn test_get_eleccion_inexistente() {
-            let sistema = SistemaDeVotacion::_new();
-            let eleccion = sistema._get_eleccion(1);
-            assert!(eleccion.is_none());
-        }
+    #[ink::test]
+    fn test_get_eleccion_inexistente() {
+        let sistema = SistemaDeVotacion::new();
+        let eleccion = sistema.get_eleccion(1);
+        assert!(eleccion.is_none());
+    }
 
-        #[ink::test]
-        fn test_validar_usuario() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            sistema._postulacion_de_usuario(1, 1, true);
-            let result = sistema._validar_usuario(1, 1, true);
-            assert!(result);
-            assert_eq!(sistema.elecciones[0].votantes.len(), 1);
-        }
+    #[ink::test]
+    fn test_validar_usuario() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        sistema.postulacion_de_usuario(1, 1, true);
+        let result = sistema.validar_usuario(1, 1, true);
+        assert!(result);
+        assert_eq!(sistema.elecciones[0].votantes.len(), 1);
+    }
 
-        #[ink::test]
-        fn test_validar_usuario_invalido() {
-            let mut sistema = SistemaDeVotacion::new();
-            sistema._crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            let result = sistema._validar_usuario(1, 1, true);
-            assert!(!result);
-        }
+    #[ink::test]
+    fn test_validar_usuario_invalido() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        let result = sistema.validar_usuario(1, 1, true);
+        assert!(!result);
+    }
 
-        #[ink::test]
-        fn test_get_usuario() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
-            let usuario = sistema._get_usuario(1);
-            assert!(usuario.is_some());
-            assert_eq!(usuario.unwrap().datos.nombre, "Juan");
-        }
+    #[ink::test]
+    fn test_get_usuario() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
+        let usuario = sistema.get_usuario(1);
+        assert!(usuario.is_some());
+        assert_eq!(usuario.unwrap().datos.nombre, "Juan");
+    }
 
-        #[ink::test]
-        fn test_get_usuario_inexistente() {
-            let sistema = SistemaDeVotacion::_new();
-            let usuario = sistema._get_usuario(1);
-            assert!(usuario.is_none());
-        }
+    #[ink::test]
+    fn test_get_usuario_inexistente() {
+        let sistema = SistemaDeVotacion::new();
+        let usuario = sistema.get_usuario(1);
+        assert!(usuario.is_none());
+    }
 
-        #[ink::test]
-        fn test_get_usuarios_registrados() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
-            sistema._crear_usuario("Ana".into(), "Garcia".into(), "87654321".into());
-            let usuarios = sistema._get_usuarios_registrados();
-            assert_eq!(usuarios.len(), 2);
-        }
+    #[ink::test]
+    fn test_get_usuarios_registrados() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
+        sistema.crear_usuario("Ana".into(), "Garcia".into(), "87654321".into());
+        let usuarios = sistema.get_usuarios_registrados();
+        assert_eq!(usuarios.len(), 2);
+    }
 
-        #[ink::test]
-        fn test_get_usuarios_registrados_vacio() {
-            let sistema = SistemaDeVotacion::_new();
-            let usuarios = sistema._get_usuarios_registrados();
-            assert_eq!(usuarios.len(), 0);
-        }
+    #[ink::test]
+    fn test_get_usuarios_registrados_vacio() {
+        let sistema = SistemaDeVotacion::new();
+        let usuarios = sistema.get_usuarios_registrados();
+        assert_eq!(usuarios.len(), 0);
+    }
 
-        #[ink::test]
-        fn test_get_todas_las_elecciones() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            sistema._crear_eleccion("Gobernador".into(), 1, 1, 2024, 31, 12, 2024);
-            let elecciones = sistema._get_todas_las_elecciones();
-            assert_eq!(elecciones.len(), 2);
-        }
+    #[ink::test]
+    fn test_get_todas_las_elecciones() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        sistema.crear_eleccion("Gobernador".into(), 1, 1, 2024, 31, 12, 2024);
+        let elecciones = sistema.get_todas_las_elecciones();
+        assert_eq!(elecciones.len(), 2);
+    }
 
-        #[ink::test]
-        fn test_get_todas_las_elecciones_vacio() {
-            let sistema = SistemaDeVotacion::_new();
-            let elecciones = sistema._get_todas_las_elecciones();
-            assert_eq!(elecciones.len(), 0);
-        }
+    #[ink::test]
+    fn test_get_todas_las_elecciones_vacio() {
+        let sistema = SistemaDeVotacion::new();
+        let elecciones = sistema.get_todas_las_elecciones();
+        assert_eq!(elecciones.len(), 0);
+    }
 
-        #[ink::test]
-        fn test_get_reporte_de_eleccion() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            sistema._iniciar_eleccion(1);
-            sistema._finalizar_eleccion(1);
-            let reporte = sistema._get_reporte_de_eleccion(1);
-            assert!(reporte.is_some());
-            assert_eq!(reporte.unwrap().cargo, "Presidente");
-        }
+    #[ink::test]
+    fn test_get_reporte_de_eleccion() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        sistema.iniciar_eleccion(1);
+        sistema.finalizar_eleccion(1);
+        let reporte = sistema.get_reporte_de_eleccion(1);
+        assert!(reporte.is_some());
+        assert_eq!(reporte.unwrap().cargo, "Presidente");
+    }
 
-        #[ink::test]
-        fn test_get_reporte_de_eleccion_inexistente() {
-            let sistema = SistemaDeVotacion::_new();
-            let reporte = sistema._get_reporte_de_eleccion(1);
-            assert!(reporte.is_none());
-        }
+    #[ink::test]
+    fn test_get_reporte_de_eleccion_inexistente() {
+        let sistema = SistemaDeVotacion::new();
+        let reporte = sistema.get_reporte_de_eleccion(1);
+        assert!(reporte.is_none());
+    }
 
-        #[ink::test]
-        fn test_crear_usuario() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
-            assert_eq!(sistema.usuarios_registrados.len(), 1);
-            assert_eq!(sistema.usuarios_registrados[0].datos.nombre, "Juan");
-        }
+    #[ink::test]
+    fn test_crear_usuario() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
+        assert_eq!(sistema.usuarios_registrados.len(), 1);
+        assert_eq!(sistema.usuarios_registrados[0].datos.nombre, "Juan");
+    }
 
-        #[ink::test]
-        fn test_crear_usuario_multiple() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
-            sistema._crear_usuario("Ana".into(), "Garcia".into(), "87654321".into());
-            assert_eq!(sistema.usuarios_registrados.len(), 2);
-            assert_eq!(sistema.usuarios_registrados[1].datos.nombre, "Ana");
-        }
+    #[ink::test]
+    fn test_crear_usuario_multiple() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
+        sistema.crear_usuario("Ana".into(), "Garcia".into(), "87654321".into());
+        assert_eq!(sistema.usuarios_registrados.len(), 2);
+        assert_eq!(sistema.usuarios_registrados[1].datos.nombre, "Ana");
+    }
 
-        #[ink::test]
-        fn test_postulacion_de_usuario() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            let result = sistema._postulacion_de_usuario(1, 1, true);
-            assert!(result);
-            assert_eq!(sistema.elecciones[0].candidatos.len(), 1);
-        }
+    #[ink::test]
+    fn test_postulacion_de_usuario() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        let result = sistema.postulacion_de_usuario(1, 1, true);
+        assert!(result);
+        assert_eq!(sistema.elecciones[0].candidatos.len(), 1);
+    }
 
-        #[ink::test]
-        fn test_postulacion_de_usuario_invalida() {
-            let mut sistema = SistemaDeVotacion::_new();
-            let result = sistema._postulacion_de_usuario(1, 1, true);
-            assert!(!result);
-        }
+    #[ink::test]
+    fn test_postulacion_de_usuario_invalida() {
+        let mut sistema = SistemaDeVotacion::new();
+        let result = sistema.postulacion_de_usuario(1, 1, true);
+        assert!(!result);
+    }
 
-        #[ink::test]
-        fn test_votar_candidato() {
-            let mut sistema = SistemaDeVotacion::_new();
-            sistema._crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
-            sistema._crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
-            sistema._iniciar_eleccion(1);
-            sistema._validar_usuario(1, 1, true);
-            let result = sistema._votar_candidato(1, 1, 1);
-            assert!(result);
-            assert_eq!(sistema.elecciones[0].votos.len(), 1);
-        }
+    #[ink::test]
+    fn test_votar_candidato() {
+        let mut sistema = SistemaDeVotacion::new();
+        sistema.crear_usuario("Juan".into(), "Perez".into(), "12345678".into());
+        sistema.crear_eleccion("Presidente".into(), 1, 1, 2024, 31, 12, 2024);
+        sistema.iniciar_eleccion(1);
+        sistema.validar_usuario(1, 1, true);
+        let result = sistema.votar_candidato(1, 1, 1);
+        assert!(result);
+        assert_eq!(sistema.elecciones[0].votos.len(), 1);
+    }
 
-        #[ink::test]
-        fn test_votar_candidato_invalido() {
-            let mut sistema = SistemaDeVotacion::_new();
-            let result = sistema._votar_candidato(1, 1, 1);
-            assert!(!result);
-        }
+    #[ink::test]
+    fn test_votar_candidato_invalido() {
+        let mut sistema = SistemaDeVotacion::new();
+        let result = sistema.votar_candidato(1, 1, 1);
+        assert!(!result);
     }
