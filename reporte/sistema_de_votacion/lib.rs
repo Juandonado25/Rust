@@ -1,5 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std, no_main)]
-#[allow(clippy::arithmetic_side_effects)]
+#![allow(clippy::arithmetic_side_effects)]
 pub use self::sistema_de_votacion::SistemaDeVotacionRef;
 #[ink::contract]
 pub mod sistema_de_votacion {
