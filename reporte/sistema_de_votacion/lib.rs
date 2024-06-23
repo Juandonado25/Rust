@@ -162,7 +162,7 @@ pub mod sistema_de_votacion {
 
         //Crea una eleccion y la pushea en la structura principal, el id de cada eleccion es la posicion en el vector +1.
         #[ink(message)]
-        pub fn crear_eleccion(&mut self,cargo:String,dia_inicio:u16,mes_inicio:u16,anio_inicio:u16,dia_fin:u16,mes_fin:u16,anio_fin:u16 ){
+        pub fn crear_eleccion(&mut self,cargo:String,dia_inicio:u16,mes_inicio:u16,anio_inicio:u16,dia_fin:u16,mes_fin:u16,anio_fin:u16 )->bool{
             let fecha_de_inicio = Fecha::new(dia_inicio,mes_inicio,anio_inicio);
             let fecha_de_fin = Fecha::new(dia_fin,mes_fin,anio_fin);
             if fecha_de_inicio.es_fecha_valida() && fecha_de_fin.es_fecha_valida(){
@@ -171,7 +171,9 @@ pub mod sistema_de_votacion {
                 for e in self.usuarios_registrados.iter_mut(){
                     e.participacion.push(false);
                 }
+                return true;
             }
+            false
         }
 
         fn existe_eleccion(&self,id:u8)->bool{
