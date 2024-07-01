@@ -2,7 +2,7 @@
 #![allow(clippy::arithmetic_side_effects)]
 pub use self::sistema_de_votacion::SistemaDeVotacionRef;
 #[ink::contract]
-mod sistema_de_votacion {
+pub mod sistema_de_votacion {
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
     use scale_info::prelude::vec;
@@ -505,7 +505,6 @@ mod sistema_de_votacion {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::sistema_de_votacion;
 
     #[ink::test]
     fn test_crear_eleccion() {
