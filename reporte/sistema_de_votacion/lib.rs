@@ -491,14 +491,14 @@ pub mod sistema_de_votacion {
         
             let dias_totales = dias_desde_1970
                 .checked_add(dias_hasta_mes)
-                .and_then(|v| v.checked_add(dia.checked_sub(1).ok_or("Underflow in dia")?))
+                .and_then(|v| v.checked_add(dia.checked_sub(1).ok_or("Underflow in dia").ok()?))
                 .ok_or("Overflow in dias_totales")?;
                 
             let segundos_totales = (dias_totales as i64)
                 .checked_mul(24)
                 .and_then(|v| v.checked_mul(3600))
-                .and_then(|v| v.checked_add((hora as i64).checked_mul(3600).ok_or("Overflow in hora")?))
-                .and_then(|v| v.checked_add((minuto as i64).checked_mul(60).ok_or("Overflow in minuto")?))
+                .and_then(|v| v.checked_add((hora as i64).checked_mul(3600).ok_or("Overflow in hora").ok()?))
+                .and_then(|v| v.checked_add((minuto as i64).checked_mul(60).ok_or("Overflow in minuto").ok()?))
                 .and_then(|v| v.checked_add(segundo as i64))
                 .ok_or("Overflow in segundos_totales")?;
             
