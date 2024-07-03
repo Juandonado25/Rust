@@ -574,7 +574,6 @@ pub mod sistema_de_votacion {
                 Ok(()) => ink::env::debug_message("SE PUEDE "),
                 Err(ref e) => ink::env::debug_message(&e),
             }
-            let aux = SistemaDeVotacion::env().account_id();
             assert!(matches!(res, Err(ref e) if e == "No tienes permiso para crear una elección"));
         }
 
