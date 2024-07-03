@@ -2,10 +2,8 @@
 pub use self::sistema_de_votacion::SistemaDeVotacionRef;
 #[ink::contract]
 pub mod sistema_de_votacion {
-    use scale_info::prelude::format;
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
-    use scale_info::prelude::vec;
 
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
@@ -70,7 +68,7 @@ pub mod sistema_de_votacion {
 /////////////////A revisar inicializacion del vector
     impl Usuario{
         fn new(nombre:String, apellido:String, dni:String,accountid:AccountId, longitud:i16)->Self{
-            Self{datos:Persona::new(nombre,apellido,dni,accountid),participacion:vec!{false;longitud as usize}}
+            Self{datos:Persona::new(nombre,apellido,dni,accountid),participacion:(0..longitud).map(|_| false).collect()}
         }
     }
     #[derive(scale::Decode, scale::Encode,Debug,Clone,PartialEq)]
@@ -388,12 +386,12 @@ pub mod sistema_de_votacion {
         
         fn timestamp(año: i32, mes: i32, dia: i32, hora: i32, minuto: i32, segundo: i32) -> i64 {
             let dias_desde_1970 = Self::dias_desde_1970_hasta_anio(año);
-            let mut dias_hasta_mes:i32 = 0;
+            let dias_hasta_mes:i32 = 0;
             for m in 1..mes {
                 let aux = Self::dias_en_mes(año, m);
                 dias_hasta_mes.checked_add(aux).unwrap();
             }
-            let dias_totales = dias_desde_1970.checked_add(dias_hasta_mes.checked_add((dia.checked_sub(1).unwrap())).unwrap()).unwrap();
+            let dias_totales = dias_desde_1970.checked_add(dias_hasta_mes.checked_add(dia.checked_sub(1).unwrap()).unwrap()).unwrap();
             let segundos_totales = (dias_totales as i64).checked_mul(24_i64.checked_mul(3600_i64.checked_add((hora as i64).checked_mul(3600_i64.checked_add((minuto as i64).checked_mul(60_i64.checked_add(segundo as i64).unwrap()).unwrap()).unwrap()).unwrap()).unwrap()).unwrap()).unwrap();
             segundos_totales
         }
