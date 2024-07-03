@@ -5,6 +5,16 @@ pub mod sistema_de_votacion {
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
 
+    #[derive(scale::Decode, scale::Encode,Debug,Clone)]
+    #[cfg_attr(
+        feature = "std",
+        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+    )]
+    pub enum Error{
+        FechaInvalida,
+        AdminInvalido,
+    }
+
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
         feature = "std",
@@ -126,36 +136,44 @@ pub mod sistema_de_votacion {
         
         //METODOS ADMINISTRADOR
 
-        ///Crea una eleccion y la pushea en la structura principal, el id de cada eleccion es la posicion en el vector +1.
+        ///Crea una eleccion y la pushea en la estructura principal, el id de cada eleccion es la posicion en el vector +1.
         #[ink(message)]
         pub fn crear_eleccion(&mut self,cargo:String,dia_inicio:i32,mes_inicio:i32,anio_inicio:i32,dia_fin:i32,mes_fin:i32,anio_fin:i32 )->bool{
             let fecha_de_inicio = Self::timestamp(anio_inicio, mes_inicio, dia_inicio, 0, 0, 0);
             let fecha_de_fin = Self::timestamp(anio_fin, mes_fin, dia_fin, 0, 0, 0);
-            if (fecha_de_inicio < fecha_de_fin) && Self::env().account_id()==self.admin.accountid{
-                let elec = Eleccion::new(cargo,&fecha_de_inicio,&fecha_de_fin);
-                self.elecciones.push(elec);
-                for e in self.usuarios_registrados.iter_mut(){
-                    e.participacion.push(false);
-                }
-                return true;
-            }else{
-                panic!("Usuario invalido")
+
+            if fecha_de_inicio >= fecha_de_fin{
+                return false;
             }
+            if Self::env().account_id()!=self.admin.accountid{
+                return false
+            }
+            
+            let elec = Eleccion::new(cargo,&fecha_de_inicio,&fecha_de_fin);
+            self.elecciones.push(elec);
+            for e in self.usuarios_registrados.iter_mut(){
+                e.participacion.push(false);
+            }
+            true
         }
 
-        fn _crear_eleccion(&mut self,cargo:String,dia_inicio:i32,mes_inicio:i32,anio_inicio:i32,dia_fin:i32,mes_fin:i32,anio_fin:i32 )->bool{
+        fn _crear_eleccion(&mut self,cargo:String,dia_inicio:i32,mes_inicio:i32,anio_inicio:i32,dia_fin:i32,mes_fin:i32,anio_fin:i32,admin_acountid:AccountId )->bool{
             let fecha_de_inicio = Self::timestamp(anio_inicio, mes_inicio, dia_inicio, 0, 0, 0);
             let fecha_de_fin = Self::timestamp(anio_fin, mes_fin, dia_fin, 0, 0, 0);
-            if (fecha_de_inicio < fecha_de_fin) && Self::env().account_id()==self.admin.accountid{
-                let elec = Eleccion::new(cargo,&fecha_de_inicio,&fecha_de_fin);
-                self.elecciones.push(elec);
-                for e in self.usuarios_registrados.iter_mut(){
-                    e.participacion.push(false);
-                }
-                return true;
-            }else{
-                panic!("Usuario invalido")
+
+            if fecha_de_inicio >= fecha_de_fin{
+                return false
             }
+            if admin_acountid!=self.admin.accountid{
+                return false
+            }
+            
+            let elec = Eleccion::new(cargo,&fecha_de_inicio,&fecha_de_fin);
+            self.elecciones.push(elec);
+            for e in self.usuarios_registrados.iter_mut(){
+                e.participacion.push(false);
+            }
+            true
         }
 
         fn existe_eleccion(&self,id:i16)->bool{
@@ -376,7 +394,7 @@ pub mod sistema_de_votacion {
         }
         
         fn dias_desde_1970_hasta_anio(anio: i32) -> i32 {
-            let mut dias:i32 = 0;
+            let dias:i32 = 0;
             for a in 1970..anio {
                 let aux = if Self::es_bisiesto(a) { 366 } else { 365 };
                 dias.checked_add(aux).unwrap();
@@ -487,13 +505,32 @@ pub mod sistema_de_votacion {
     use super::*;
     
     #[ink::test]
-    fn instanciar_sistema_de_votacion(){
+    fn instanciar_sistema_de_votacion_y_probar_valores_iniciales(){
         let sistema = SistemaDeVotacion::_new();
         //Prueba el AccountId guardado con uno capturado del ambiente (entiendo que deberia ser el mismo)
         assert_eq!(sistema.admin.accountid, ink::env::test::default_accounts::<ink::env::DefaultEnvironment>().alice);
         assert_eq!(sistema.elecciones.len(),0);
         assert_eq!(sistema.usuarios_registrados.len(),0);
     }
+
+    #[ink::test]
+    fn crear_eleccion_valida(){
+        let mut sistema = SistemaDeVotacion::_new();
+        let account = sistema.admin.accountid;
+        let res = sistema._crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024,account);
+        let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024,account);
+        assert_eq!(res,true);
+        assert_eq!(sistema.elecciones.len(),2);
+    }
+
+    #[ink::test]
+    fn crear_eleccion_fecha_invalida(){
+        let mut sistema = SistemaDeVotacion::_new();
+        let account = sistema.admin.accountid;
+        let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 05, 2024, 20, 03, 2024,account);
+        assert_eq!(res,false);
+    }
+
     }
     
 }
