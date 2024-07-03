@@ -4,6 +4,7 @@ pub use self::sistema_de_votacion::SistemaDeVotacionRef;
 pub mod sistema_de_votacion {
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
+    use ink::env::DefaultEnvironment;
 
     #[derive(scale::Decode, scale::Encode,Debug,Clone)]
     #[cfg_attr(
@@ -45,6 +46,16 @@ pub mod sistema_de_votacion {
             let votantes=self.votantes.clone();
             votantes
         }
+        pub fn get_cantidad_de_votantes(&self)->i16{
+            self.votantes.len() as i16
+        }
+        pub fn get_cantidad_de_votos_emitidos(&self)->i16{
+            let mut cantidad=0;
+            for i in &self.candidatos{
+                cantidad=i.cant_votos;
+            }
+            cantidad
+        }
     }
     #[derive(scale::Decode, scale::Encode,Debug,Clone,PartialEq)]
     #[cfg_attr(
@@ -63,11 +74,61 @@ pub mod sistema_de_votacion {
             Self{nombre,apellido,dni,accountid}
         }
     }
+
+    #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
+    #[cfg_attr(
+        feature = "std",
+        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+    )]
+    pub struct Participacion{
+        cantidad_votos_emitidos:i16,
+        porcentaje_de_votacion:i16,
+    }
+    impl Participacion{
+        pub fn new() -> Self {
+            let cantidad_votos_emitidos=0;
+            let porcentaje_de_votacion=0;
+            Participacion{
+                cantidad_votos_emitidos,
+                porcentaje_de_votacion,
+            }
+        }
+        pub fn set_cantidad_votos_emitidos(&mut self, cantidad:i16) {
+            self.cantidad_votos_emitidos = cantidad;
+        }
+        pub fn set_porcentaje_de_votacion(&mut self, porcentaje:i16) {
+            self.porcentaje_de_votacion = porcentaje;
+        }
+    }
+    #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
+    #[cfg_attr(
+        feature = "std",
+        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+    )]
+    pub struct Votantes {
+        registrados:Vec<Votante>,
+        aprobados:Vec<Votante>,
+    }
+    impl Votantes{
+        pub fn new() -> Self {
+            Votantes {
+                registrados: Vec::new(),
+                aprobados: Vec::new(),
+            }
+        }
+        pub fn set_registrados(&mut self, registrados: Vec<Votante>) {
+            self.registrados = registrados;
+        }
+        pub fn set_aprobados(&mut self, aprobados: Vec<Votante>) {
+            self.aprobados = aprobados;
+        }
+    }
     #[derive(scale::Decode, scale::Encode,Debug,Clone)]
     #[cfg_attr(
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
     )]
+    
     pub struct Usuario{
         datos:Persona,
         participacion:Vec<bool>,//vector usado para controlar si la persona esta participando de una eleccion, 
@@ -95,6 +156,7 @@ pub mod sistema_de_votacion {
             Self{dato,estado_del_voto:false}
         }
     }
+    
     #[derive(scale::Decode, scale::Encode,Debug,Clone,PartialEq)]
     #[cfg_attr(
         feature = "std",
@@ -140,7 +202,15 @@ pub mod sistema_de_votacion {
         #[ink(message)]
         pub fn crear_eleccion(&mut self,cargo:String,dia_inicio:i32,mes_inicio:i32,anio_inicio:i32,dia_fin:i32,mes_fin:i32,anio_fin:i32 )->bool{
             let fecha_de_inicio = Self::timestamp(anio_inicio, mes_inicio, dia_inicio, 0, 0, 0);
+            let fecha_de_inicio = match fecha_de_inicio{
+                Ok(dato) =>  dato,
+                Err(e) => panic!("{e}"),
+            };
             let fecha_de_fin = Self::timestamp(anio_fin, mes_fin, dia_fin, 0, 0, 0);
+            let fecha_de_fin = match fecha_de_fin{
+                Ok(dato) =>  dato,
+                Err(e) => panic!("{e}"),
+            };
 
             if fecha_de_inicio >= fecha_de_fin{
                 return false;
@@ -157,14 +227,22 @@ pub mod sistema_de_votacion {
             true
         }
 
-        fn _crear_eleccion(&mut self,cargo:String,dia_inicio:i32,mes_inicio:i32,anio_inicio:i32,dia_fin:i32,mes_fin:i32,anio_fin:i32,admin_acountid:AccountId )->bool{
+        fn _crear_eleccion(&mut self,cargo:String,dia_inicio:i32,mes_inicio:i32,anio_inicio:i32,dia_fin:i32,mes_fin:i32,anio_fin:i32 )->bool{
             let fecha_de_inicio = Self::timestamp(anio_inicio, mes_inicio, dia_inicio, 0, 0, 0);
+            let fecha_de_inicio = match fecha_de_inicio{
+                Ok(dato) =>  dato,
+                Err(e) => panic!("{e}"),
+            };
             let fecha_de_fin = Self::timestamp(anio_fin, mes_fin, dia_fin, 0, 0, 0);
+            let fecha_de_fin = match fecha_de_fin{
+                Ok(dato) =>  dato,
+                Err(e) => panic!("{e}"),
+            };
 
             if fecha_de_inicio >= fecha_de_fin{
-                return false
+                return false;
             }
-            if admin_acountid!=self.admin.accountid{
+            if Self::env().account_id()!=self.admin.accountid{
                 return false
             }
             
@@ -393,26 +471,38 @@ pub mod sistema_de_votacion {
             }
         }
         
-        fn dias_desde_1970_hasta_anio(anio: i32) -> i32 {
-            let dias:i32 = 0;
+        fn dias_desde_1970_hasta_anio(anio: i32) -> Result<i32, &'static str> {
+            let mut dias: i32 = 0;
             for a in 1970..anio {
-                let aux = if Self::es_bisiesto(a) { 366 } else { 365 };
-                dias.checked_add(aux).unwrap();
+                dias = dias.checked_add(if Self::es_bisiesto(a) { 366 } else { 365 })
+                    .ok_or("Overflow in dias_desde_1970_hasta_anio")?;
             }
-            dias
+            Ok(dias)
         }
         
-        fn timestamp(año: i32, mes: i32, dia: i32, hora: i32, minuto: i32, segundo: i32) -> i64 {
-            let dias_desde_1970 = Self::dias_desde_1970_hasta_anio(año);
-            let dias_hasta_mes:i32 = 0;
+        fn timestamp(anio: i32, mes: i32, dia: i32, hora: i32, minuto: i32, segundo: i32) -> Result<i64, &'static str> {
+            let dias_desde_1970 = Self::dias_desde_1970_hasta_anio(anio)?;
+        
+            let mut dias_hasta_mes: i32 = 0;
             for m in 1..mes {
-                let aux = Self::dias_en_mes(año, m);
-                dias_hasta_mes.checked_add(aux).unwrap();
+                dias_hasta_mes = dias_hasta_mes.checked_add(Self::dias_en_mes(anio, m))
+                    .ok_or("Overflow in dias_hasta_mes")?;
             }
-            let dias_totales = dias_desde_1970.checked_add(dias_hasta_mes.checked_add(dia.checked_sub(1).unwrap()).unwrap()).unwrap();
-            let segundos_totales = (dias_totales as i64).checked_mul(24_i64.checked_mul(3600_i64.checked_add((hora as i64).checked_mul(3600_i64.checked_add((
-                minuto as i64).checked_mul(60_i64.checked_add(segundo as i64).unwrap()).unwrap()).unwrap()).unwrap()).unwrap()).unwrap()).unwrap();
-            segundos_totales
+        
+            let dias_totales = dias_desde_1970
+                .checked_add(dias_hasta_mes)
+                .and_then(|v| v.checked_add(dia.checked_sub(1).ok_or("Underflow in dia")?))
+                .ok_or("Overflow in dias_totales")?;
+                
+            let segundos_totales = (dias_totales as i64)
+                .checked_mul(24)
+                .and_then(|v| v.checked_mul(3600))
+                .and_then(|v| v.checked_add((hora as i64).checked_mul(3600).ok_or("Overflow in hora")?))
+                .and_then(|v| v.checked_add((minuto as i64).checked_mul(60).ok_or("Overflow in minuto")?))
+                .and_then(|v| v.checked_add(segundo as i64))
+                .ok_or("Overflow in segundos_totales")?;
+            
+            Ok(segundos_totales.try_into().unwrap())
         }
 
         //METODOS DE USUARIO
@@ -516,9 +606,9 @@ pub mod sistema_de_votacion {
     #[ink::test]
     fn crear_eleccion_valida(){
         let mut sistema = SistemaDeVotacion::_new();
-        let account = sistema.admin.accountid;
-        let res = sistema._crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024,account);
-        let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024,account);
+        let account = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>().alice;
+        let res = sistema._crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);
+        let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024);
         assert_eq!(res,true);
         assert_eq!(sistema.elecciones.len(),2);
     }
@@ -527,10 +617,17 @@ pub mod sistema_de_votacion {
     fn crear_eleccion_fecha_invalida(){
         let mut sistema = SistemaDeVotacion::_new();
         let account = sistema.admin.accountid;
-        let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 05, 2024, 20, 03, 2024,account);
+        let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 05, 2024, 20, 03, 2024);
         assert_eq!(res,false);
     }
 
+    #[ink::test]
+    fn crear_eleccion_admin_invalido(){
+        let mut sistema = SistemaDeVotacion::_new();
+        let account = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>().bob;// el admin es alice, por eso uso el accountid de bob.
+        let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 05, 2024, 20, 03, 2024);
+        assert_eq!(res,false);
+    }
     }
     
 }
