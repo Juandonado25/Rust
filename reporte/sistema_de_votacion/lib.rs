@@ -4,8 +4,6 @@ pub use self::sistema_de_votacion::SistemaDeVotacionRef;
 pub mod sistema_de_votacion {
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
-    use ink::env::DefaultEnvironment;
-
     #[derive(scale::Decode, scale::Encode,Debug,Clone)]
     #[cfg_attr(
         feature = "std",
@@ -592,42 +590,55 @@ pub mod sistema_de_votacion {
 
     #[cfg(test)]
     mod tests {
-    use super::*;
-    
-    #[ink::test]
-    fn instanciar_sistema_de_votacion_y_probar_valores_iniciales(){
-        let sistema = SistemaDeVotacion::_new();
-        //Prueba el AccountId guardado con uno capturado del ambiente (entiendo que deberia ser el mismo)
-        assert_eq!(sistema.admin.accountid, ink::env::test::default_accounts::<ink::env::DefaultEnvironment>().alice);
-        assert_eq!(sistema.elecciones.len(),0);
-        assert_eq!(sistema.usuarios_registrados.len(),0);
-    }
+        use super::*;
+        use ink::env::test;
 
-    #[ink::test]
-    fn crear_eleccion_valida(){
-        let mut sistema = SistemaDeVotacion::_new();
-        let account = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>().alice;
-        let res = sistema._crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);
-        let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024);
-        assert_eq!(res,true);
-        assert_eq!(sistema.elecciones.len(),2);
-    }
+        #[ink::test]
+        fn crear_eleccion_admin_invalido(){
+            let mut sistema = SistemaDeVotacion::_new();
+            let accounts = test::default_accounts::<SistemaDeVotacion>();
+            test::set_caller::<SistemaDeVotacion>(accounts.bob);
+            let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024);
+            assert_eq!(res,false);
+        }
+        
+        #[ink::test]
+        fn instanciar_sistema_de_votacion_y_probar_valores_iniciales(){
+            let sistema = SistemaDeVotacion::_new();
+            //Prueba el AccountId guardado con uno capturado del ambiente (entiendo que deberia ser el mismo)
+            assert_eq!(sistema.admin.accountid, ink::env::test::default_accounts::<ink::env::DefaultEnvironment>().alice);
+            assert_eq!(sistema.elecciones.len(),0);
+            assert_eq!(sistema.usuarios_registrados.len(),0);
+        }
 
-    #[ink::test]
-    fn crear_eleccion_fecha_invalida(){
-        let mut sistema = SistemaDeVotacion::_new();
-        let account = sistema.admin.accountid;
-        let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 05, 2024, 20, 03, 2024);
-        assert_eq!(res,false);
-    }
+        #[ink::test]
+        fn crear_eleccion_valida(){
+            let mut sistema = SistemaDeVotacion::_new();
+            let account = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>().alice;
+            let res = sistema._crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);
+            let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024);
+            assert_eq!(res,true);
+            assert_eq!(sistema.elecciones.len(),2);
+        }
 
-    #[ink::test]
-    fn crear_eleccion_admin_invalido(){
-        let mut sistema = SistemaDeVotacion::_new();
-        let account = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>().bob;// el admin es alice, por eso uso el accountid de bob.
-        let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 05, 2024, 20, 03, 2024);
-        assert_eq!(res,false);
-    }
+        #[ink::test]
+        fn crear_eleccion_fecha_invalida(){
+            let mut sistema = SistemaDeVotacion::_new();
+            let account = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>().alice;
+            let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 05, 2024, 20, 03, 2024);
+            assert_eq!(res,false);
+        }
+
+        #[ink::test]
+        fn crear_usuarios(){
+            let mut sistema = SistemaDeVotacion::_new();
+            sistema._crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));
+            sistema._crear_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));
+            sistema._crear_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));
+            sistema._crear_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));
+            sistema._crear_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));
+            assert_eq!(sistema.usuarios_registrados.len(),5);
+        }
     }
     
 }
