@@ -54,6 +54,9 @@ pub mod sistema_de_votacion {
             }
             cantidad
         }
+        pub fn get_candidatos(&self)->Vec<Candidato>{
+            self.candidatos.clone()
+        }
     }
     #[derive(scale::Decode, scale::Encode,Debug,Clone,PartialEq)]
     #[cfg_attr(
@@ -73,54 +76,7 @@ pub mod sistema_de_votacion {
         }
     }
 
-    #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub struct Participacion{
-        cantidad_votos_emitidos:i16,
-        porcentaje_de_votacion:i16,
-    }
-    impl Participacion{
-        pub fn new() -> Self {
-            let cantidad_votos_emitidos=0;
-            let porcentaje_de_votacion=0;
-            Participacion{
-                cantidad_votos_emitidos,
-                porcentaje_de_votacion,
-            }
-        }
-        pub fn set_cantidad_votos_emitidos(&mut self, cantidad:i16) {
-            self.cantidad_votos_emitidos = cantidad;
-        }
-        pub fn set_porcentaje_de_votacion(&mut self, porcentaje:i16) {
-            self.porcentaje_de_votacion = porcentaje;
-        }
-    }
-    #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub struct Votantes {
-        registrados:Vec<Votante>,
-        aprobados:Vec<Votante>,
-    }
-    impl Votantes{
-        pub fn new() -> Self {
-            Votantes {
-                registrados: Vec::new(),
-                aprobados: Vec::new(),
-            }
-        }
-        pub fn set_registrados(&mut self, registrados: Vec<Votante>) {
-            self.registrados = registrados;
-        }
-        pub fn set_aprobados(&mut self, aprobados: Vec<Votante>) {
-            self.aprobados = aprobados;
-        }
-    }
+    
     #[derive(scale::Decode, scale::Encode,Debug,Clone)]
     #[cfg_attr(
         feature = "std",
@@ -167,6 +123,9 @@ pub mod sistema_de_votacion {
     impl Candidato{
         pub fn new(dato:Persona)->Self{
             Self{dato,cant_votos:0}
+        }
+        pub fn get_cantidad_votos(&self)->i16{
+            self.cant_votos
         }
     }
     #[ink(storage)]
@@ -520,41 +479,42 @@ pub mod sistema_de_votacion {
         /// la participacion del usuario en dicha eleccion para que no pueda inscribirse 2 veces en la misma eleccion.
         #[ink(message)]
         pub fn postulacion_de_usuario(&mut self, id_usuario:i16, id_eleccion:i16, es_votante:bool)->bool{
-            let id = id_usuario.checked_sub(1).unwrap();
-            let id_elec = id_usuario.checked_sub(1).unwrap();
-            if Self::env().account_id()==self.usuarios_registrados[id_usuario as usize].datos.accountid && self.existe_eleccion(id_eleccion) && 
+            let id_user = id_usuario.checked_sub(1).unwrap();
+            let id_elec = id_eleccion.checked_sub(1).unwrap();
+            if Self::env().account_id()==self.usuarios_registrados[id_user as usize].datos.accountid && self.existe_eleccion(id_eleccion) && 
             self.existe_usuario(id_usuario) && self.eleccion_no_empezada(id_eleccion){
                 let eleccion = self.elecciones.get_mut(id_elec as usize).unwrap();
-                let usuario = self.usuarios_registrados.get_mut(id as usize).unwrap();
-                if usuario.participacion[id_eleccion as usize]==false{
+                let usuario = self.usuarios_registrados.get_mut(id_user as usize).unwrap();
+                if usuario.participacion[id_elec as usize]==false{
                     if es_votante{
                         eleccion.postulados_a_votantes.push(Votante::new(usuario.clone().datos));
                     }else{
                         eleccion.postulados_a_candidatos.push(Candidato::new(usuario.clone().datos));
                     }
                     
-                    self.usuarios_registrados[id as usize].participacion[id as usize] = true;
+                    self.usuarios_registrados[id_user as usize].participacion[id_user as usize] = true;
                     return true;
                 }
             }
             false
+            
         }
 
         fn _postulacion_de_usuario(&mut self, id_usuario:i16, id_eleccion:i16, es_votante:bool)->bool{
-            let id = id_usuario.checked_sub(1).unwrap();
-            let id_elec = id_usuario.checked_sub(1).unwrap();
-            if Self::env().account_id()==self.usuarios_registrados[id_usuario as usize].datos.accountid && self.existe_eleccion(id_eleccion) && 
+            let id_user = id_usuario.checked_sub(1).unwrap();
+            let id_elec = id_eleccion.checked_sub(1).unwrap();
+            if Self::env().account_id()==self.usuarios_registrados[id_user as usize].datos.accountid && self.existe_eleccion(id_eleccion) && 
             self.existe_usuario(id_usuario) && self.eleccion_no_empezada(id_eleccion){
                 let eleccion = self.elecciones.get_mut(id_elec as usize).unwrap();
-                let usuario = self.usuarios_registrados.get_mut(id as usize).unwrap();
-                if usuario.participacion[id_eleccion as usize]==false{
+                let usuario = self.usuarios_registrados.get_mut(id_user as usize).unwrap();
+                if usuario.participacion[id_elec as usize]==false{
                     if es_votante{
                         eleccion.postulados_a_votantes.push(Votante::new(usuario.clone().datos));
                     }else{
                         eleccion.postulados_a_candidatos.push(Candidato::new(usuario.clone().datos));
                     }
                     
-                    self.usuarios_registrados[id as usize].participacion[id as usize] = true;
+                    self.usuarios_registrados[id_user as usize].participacion[id_user as usize] = true;
                     return true;
                 }
             }
@@ -596,8 +556,8 @@ pub mod sistema_de_votacion {
         #[ink::test]
         fn crear_eleccion_admin_invalido(){
             let mut sistema = SistemaDeVotacion::_new();
-            let accounts = test::default_accounts::<SistemaDeVotacion>();
-            test::set_caller::<SistemaDeVotacion>(accounts.bob);
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
             let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024);
             assert_eq!(res,false);
         }
@@ -639,6 +599,73 @@ pub mod sistema_de_votacion {
             sistema._crear_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));
             assert_eq!(sistema.usuarios_registrados.len(),5);
         }
+
+        #[ink::test]
+        fn probando_acceso_con_getter_a_eleccion_en_la_posicion_deseada(){
+            let mut sistema = SistemaDeVotacion::_new();
+            let res = sistema._crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);
+            let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024);
+            sistema._crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));
+            sistema._crear_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));
+            sistema._crear_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));
+            sistema._crear_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));
+            sistema._crear_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));
+            let aux = sistema._get_eleccion(2);
+            assert_eq!(aux.unwrap().cargo,sistema.elecciones[1].cargo);
+        }
+
+        #[ink::test]
+        fn postulacion_de_usuario(){
+            let mut sistema = SistemaDeVotacion::_new();
+            let res = sistema._crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);//elec 1
+            sistema._crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema._postulacion_de_usuario(1,1,false);
+            assert_eq!(sistema.elecciones[0].postulados_a_candidatos[0].dato.nombre,String::from("Carlos"));
+        }
+
+        #[ink::test]
+        fn vallidacion_de_usuario(){
+            let mut sistema = SistemaDeVotacion::_new();
+            let res = sistema._crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);//elec 1
+            sistema._crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema._postulacion_de_usuario(1,1,false);
+            sistema._validar_usuario(0, 0, true);
+            assert_eq!(sistema.elecciones[0].candidatos[0].dato.nombre,String::from("Carlos"));
+        }
+
+        #[ink::test]
+        fn probar_iniciar_votacion(){
+            let mut sistema = SistemaDeVotacion::_new();
+            let res = sistema._crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);//elec 1
+            let res = sistema._crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024);//elec 2
+            sistema._crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema._postulacion_de_usuario(1,1,false);
+            sistema._postulacion_de_usuario(1,2,true);
+            sistema._crear_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));//user2
+            sistema._postulacion_de_usuario(2,1,false);
+            sistema._postulacion_de_usuario(2,2,true);
+            sistema._crear_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));//user3
+            sistema._postulacion_de_usuario(3,1,true);
+            sistema._postulacion_de_usuario(3,2,true);
+            sistema._crear_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));//user4
+            sistema._postulacion_de_usuario(4,1,true);
+            sistema._postulacion_de_usuario(4,2,false);
+            sistema._crear_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));//user5
+            sistema._postulacion_de_usuario(5,1,true);
+            sistema._postulacion_de_usuario(5,2,false);
+            sistema._validar_usuario(1, 1, true);
+            sistema._validar_usuario(1, 2, true);
+            sistema._validar_usuario(2, 1, true);
+            sistema._validar_usuario(2, 2, true);
+            sistema._validar_usuario(3, 1, true);
+            sistema._validar_usuario(3, 2, true);
+            sistema._validar_usuario(4, 1, true);
+            sistema._validar_usuario(4, 2, true);
+            sistema._validar_usuario(5, 1, true);
+            sistema._validar_usuario(5, 2, true);
+            sistema._iniciar_eleccion(1);
+            assert!(sistema.elecciones[0].abierta);
+        }
     }
     
 }
@@ -654,4 +681,3 @@ pub mod sistema_de_votacion {
         !- Tener en cuenta que si la eleccion tiene un solo candidato no se va a poder inicializar y 
         en el reporte se marcara como ganador al unico candidato. si no existe ningun candidato retornara eleccion invalida.
 */
-
