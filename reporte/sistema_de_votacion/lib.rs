@@ -393,11 +393,8 @@ pub mod sistema_de_votacion {
                 let aux = Self::dias_en_mes(año, m);
                 dias_hasta_mes.checked_add(aux).unwrap();
             }
-            let dias_totales = dias_desde_1970 + dias_hasta_mes + (dia.checked_sub(1).unwrap());
-            let segundos_totales = dias_totales as i64 * 24 * 3600 +
-                hora as i64 * 3600 +
-                minuto as i64 * 60 +
-                segundo as i64;
+            let dias_totales = dias_desde_1970.checked_add(dias_hasta_mes.checked_add((dia.checked_sub(1).unwrap())).unwrap()).unwrap();
+            let segundos_totales = (dias_totales as i64).checked_mul(24_i64.checked_mul(3600_i64.checked_add((hora as i64).checked_mul(3600_i64.checked_add((minuto as i64).checked_mul(60_i64.checked_add(segundo as i64).unwrap()).unwrap()).unwrap()).unwrap()).unwrap()).unwrap()).unwrap();
             segundos_totales
         }
 
