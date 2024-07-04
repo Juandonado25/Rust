@@ -139,7 +139,7 @@ pub mod sistema_de_votacion {
         #[ink(constructor)]
         pub fn new() -> Self {
             Self { 
-                admin: Persona::new(String::from("admin"), String::from("admin"), String::from("admin"),Self::env().account_id()),
+                admin: Persona::new(String::from("admin"), String::from("admin"), String::from("admin"),Self::env().caller() ),
                 usuarios_registrados:Vec::new(),
                 elecciones:Vec::new(),
             }
@@ -164,7 +164,7 @@ pub mod sistema_de_votacion {
             if fecha_de_inicio >= fecha_de_fin {
                 return Err(String::from("La fecha de inicio debe ser anterior a la fecha de fin"));
             }
-            if Self::env().account_id() != self.admin.accountid {
+            if Self::env().caller()  != self.admin.accountid {
                 return Err(String::from("No tienes permiso para crear una elección"));
             }
         
@@ -218,7 +218,7 @@ pub mod sistema_de_votacion {
         ///Si existe la eleccion y hay mas de un candidato la inicializa.
         #[ink(message)]
         pub fn iniciar_eleccion(&mut self,id:i16)->bool{
-            if self.existe_eleccion(id) && Self::env().account_id()==self.admin.accountid{
+            if self.existe_eleccion(id) && Self::env().caller() ==self.admin.accountid{
                 let eleccion=self.elecciones.get_mut(id.checked_sub(1).unwrap() as usize).unwrap();
                 if eleccion.candidatos.len()>=2{
                     eleccion.abierta=true;
@@ -231,7 +231,7 @@ pub mod sistema_de_votacion {
         ///Devuelve una eleccion, util para el reporte.
         #[ink(message)]
         pub fn get_eleccion(&self, eleccion_id:i16)->Option<Eleccion>{
-            if Self::env().account_id()==self.admin.accountid && eleccion_id!=0 && eleccion_id<=self.elecciones.len() as i16{
+            if Self::env().caller() ==self.admin.accountid && eleccion_id!=0 && eleccion_id<=self.elecciones.len() as i16{
                 let elec = self.elecciones.get(eleccion_id.checked_sub(1).unwrap() as usize).unwrap();
                 return Some(elec.clone())
             }
@@ -242,7 +242,7 @@ pub mod sistema_de_votacion {
         ///Valida solo si el usuario esta postulado para esa eleccion.
         #[ink(message)]
         pub fn validar_usuario(&mut self, id_usuario:i16, id_eleccion:i16, valido:bool)->bool{
-            if Self::env().account_id()==self.admin.accountid && self.existe_eleccion(id_eleccion) && self.existe_usuario(id_usuario) && valido && self.eleccion_no_empezada(id_eleccion) 
+            if Self::env().caller() ==self.admin.accountid && self.existe_eleccion(id_eleccion) && self.existe_usuario(id_usuario) && valido && self.eleccion_no_empezada(id_eleccion) 
             && self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].participacion[id_eleccion.checked_sub(1).unwrap() as usize]{
                 let vot = Votante::new(self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.clone());
                 let eleccion = self.elecciones.get_mut(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
@@ -263,7 +263,7 @@ pub mod sistema_de_votacion {
 
         #[ink(message)]
         pub fn get_usuario(&self, id_usuario:i16)->Option<Usuario>{
-            if Self::env().account_id()==self.admin.accountid && id_usuario<=self.usuarios_registrados.len() as i16{
+            if Self::env().caller() ==self.admin.accountid && id_usuario<=self.usuarios_registrados.len() as i16{
                 return Some(self.usuarios_registrados.get(id_usuario.checked_sub(1).unwrap() as usize).unwrap().clone());
             }
             None
@@ -271,7 +271,7 @@ pub mod sistema_de_votacion {
 
         #[ink(message)]
         pub fn get_usuarios_registrados(&self)-> Vec<Usuario>{
-            if Self::env().account_id()==self.admin.accountid{
+            if Self::env().caller() ==self.admin.accountid{
                 self.usuarios_registrados.clone()
             }else{
                 panic!("admin invalido")
@@ -280,7 +280,7 @@ pub mod sistema_de_votacion {
 
         #[ink(message)]
         pub fn get_todas_las_elecciones(&self)-> Vec<Eleccion>{
-            if Self::env().account_id()==self.admin.accountid{
+            if Self::env().caller() ==self.admin.accountid{
                 self.elecciones.clone()
             }else{
                 panic!("admin invalido")
@@ -290,7 +290,7 @@ pub mod sistema_de_votacion {
         // Devuelve los datos de una eleccion, solo si esta esta cerrada y finalizada.
         #[ink(message)]
         pub fn get_reporte_de_eleccion(&self, id_eleccion:i16)->Option<Eleccion>{
-            if Self::env().account_id()==self.admin.accountid && self.existe_eleccion(id_eleccion){
+            if Self::env().caller() ==self.admin.accountid && self.existe_eleccion(id_eleccion){
                 let eleccion = self.elecciones.get(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
                 if eleccion.finalizada{
                     return Some(eleccion.clone())
@@ -359,7 +359,7 @@ pub mod sistema_de_votacion {
         
         #[ink(message)]
         pub fn crear_usuario(&mut self, nombre:String, apellido:String, dni:String){
-            let usuario = Usuario::new(nombre, apellido, dni,Self::env().account_id(), self.elecciones.len() as i16);
+            let usuario = Usuario::new(nombre, apellido, dni,Self::env().caller() , self.elecciones.len() as i16);
             self.usuarios_registrados.push(usuario);
         }
         
@@ -369,7 +369,7 @@ pub mod sistema_de_votacion {
         pub fn postulacion_de_usuario(&mut self, id_usuario:i16, id_eleccion:i16, es_votante:bool)->bool{
             let id_user = id_usuario.checked_sub(1).unwrap();
             let id_elec = id_eleccion.checked_sub(1).unwrap();
-            if Self::env().account_id()==self.usuarios_registrados[id_user as usize].datos.accountid && self.existe_eleccion(id_eleccion) && 
+            if Self::env().caller() ==self.usuarios_registrados[id_user as usize].datos.accountid && self.existe_eleccion(id_eleccion) && 
             self.existe_usuario(id_usuario) && self.eleccion_no_empezada(id_eleccion){
                 let eleccion = self.elecciones.get_mut(id_elec as usize).unwrap();
                 let usuario = self.usuarios_registrados.get_mut(id_user as usize).unwrap();
@@ -395,7 +395,7 @@ pub mod sistema_de_votacion {
             let eleccion = self.elecciones.get_mut(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
             let votante = Votante::new(self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.clone());
 
-            if Self::env().account_id()!=self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.accountid {
+            if Self::env().caller() !=self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.accountid {
                 return Err(String::from("No tiene permiso de administrador"));
             }
             
@@ -422,19 +422,19 @@ pub mod sistema_de_votacion {
         use super::*;
         use ink::env::test;
 
-        // #[ink::test]
-        // fn crear_eleccion_admin_invalido() {
-        //     let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-        //     ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
-        //     let mut sistema = SistemaDeVotacion::new();
-        //     ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
-        //     let res = sistema.crear_eleccion(String::from("CEO de X"), 15, 3, 2024, 20, 3, 2024);
-        //     match res {
-        //         Ok(()) => ink::env::debug_message("SE PUEDE "),
-        //         Err(ref e) => ink::env::debug_message(&e),
-        //     }
-        //     assert!(matches!(res, Err(ref e) if e == "No tienes permiso para crear una elección"));
-        // }
+        #[ink::test]
+        fn crear_eleccion_admin_invalido() {
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
+            let res = sistema.crear_eleccion(String::from("CEO de X"), 15, 3, 2024, 20, 3, 2024);
+            match res {
+                Ok(()) => ink::env::debug_message("SE PUEDE "),
+                Err(ref e) => ink::env::debug_message(&e),
+            }
+            assert!(matches!(res, Err(ref e) if e == "No tienes permiso para crear una elección"));
+        }
 
         
         #[ink::test]
@@ -629,6 +629,58 @@ pub mod sistema_de_votacion {
                 Err(ref e) => ink::env::debug_message(&e),
             }
             assert_eq!(sistema.elecciones[0].candidatos[1].cant_votos,1);
+        }
+
+        #[ink::test]
+        fn test_elecciones_postulados_votantes(){
+            let num:i64=54;
+            let eleccion = Eleccion::new("presidente".to_string(),&num,&num);
+            let votantes=eleccion.get_postulados_a_votantes();
+            assert_eq!(false,false);
+        }
+        #[ink::test]
+        fn test_elecciones_votantes(){
+            let num:i64=54;
+            let eleccion = Eleccion::new("presidente".to_string(),&num,&num);
+            let votantes=eleccion.get_votantes();
+            assert_eq!(false,false);
+        }
+        #[ink::test]
+        fn test_elecciones_cantidad_de_votantes(){
+            let num:i64=54;
+            let eleccion = Eleccion::new("presidente".to_string(),&num,&num);
+            let cantidad=eleccion.get_cantidad_de_votantes();
+            assert_eq!(cantidad,0);
+        }
+        #[ink::test]
+        fn test_elecciones_cantidad_de_votos_emitidos(){
+            let num:i64=54;
+            let eleccion = Eleccion::new("presidente".to_string(),&num,&num);
+            let cantidad=eleccion.get_cantidad_de_votos_emitidos();
+            assert_eq!(cantidad,0);
+        }
+        #[ink::test]
+        fn test_elecciones_candidato(){
+            let num:i64=89;
+            let eleccion = Eleccion::new("presidente".to_string(),&num,&num);
+            let candidato=eleccion.get_candidatos();
+            assert_eq!(false,false);
+        }
+
+        #[test]
+        fn testget_postulados_a_votantes() {
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            sistema.crear_usuario(String::from("Juan"), String::from("Perez"), String::from("12345678"));
+            sistema.crear_eleccion(String::from("Presidente"),1, 1, 2024,10, 1, 2024,);
+            sistema.postulacion_de_usuario(1, 1, true);
+            let eleccion = sistema.get_eleccion(1).unwrap();
+            let postulados = eleccion.get_postulados_a_votantes();
+            assert_eq!(postulados.len(), 1);
+            assert_eq!(postulados[0].dato.nombre, String::from("Juan"));
+            assert_eq!(postulados[0].dato.apellido, String::from("Perez"));
+            assert_eq!(postulados[0].dato.dni, String::from("12345678"));
         }
     }
     //cargo tarpaulin --target-dir src/coverage --skip-clean --exclude-files = target/debug/* --out html
