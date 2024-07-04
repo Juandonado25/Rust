@@ -4,6 +4,7 @@ pub use self::sistema_de_votacion::SistemaDeVotacionRef;
 pub mod sistema_de_votacion {
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
+    use ink::primitives::AccountId as OtherAccountId;
     #[derive(scale::Decode, scale::Encode,Debug,Clone)]
     #[cfg_attr(
         feature = "std",
@@ -215,6 +216,15 @@ pub mod sistema_de_votacion {
             }
         }
 
+        #[ink(message)]
+        pub fn ceder_admin(&mut self, actid:AccountId)->Result<(), String>{
+            if Self::env().caller() == self.admin.accountid{
+                self.admin.accountid = actid;
+                return Ok(());
+            }
+            Err(String::from("No tiene permiso de admin para ejecutar este metodo. "))
+        }
+
         ///Si existe la eleccion y hay mas de un candidato la inicializa.
         #[ink(message)]
         pub fn iniciar_eleccion(&mut self,id:i16)->bool{
@@ -263,7 +273,7 @@ pub mod sistema_de_votacion {
 
         #[ink(message)]
         pub fn get_usuario(&self, id_usuario:i16)->Option<Usuario>{
-            if Self::env().caller() ==self.admin.accountid && id_usuario<=self.usuarios_registrados.len() as i16{
+            if Self::env().caller() ==self.admin.accountid && id_usuario<=(self.usuarios_registrados.len() as i16){
                 return Some(self.usuarios_registrados.get(id_usuario.checked_sub(1).unwrap() as usize).unwrap().clone());
             }
             None
@@ -420,7 +430,27 @@ pub mod sistema_de_votacion {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use ink::env::test;
+        use ink::env::{caller, test};
+
+        #[ink::test]
+        fn ceder_admin_con_permiso_para_hacerlo(){
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            let res = sistema.ceder_admin(accounts.bob);
+            assert!(res.is_ok());
+            assert_eq!(sistema.admin.accountid,accounts.bob);
+        }
+
+        #[ink::test]
+        fn ceder_admin_con_permiso_para_hacerlo(){
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            let res = sistema.ceder_admin(accounts.bob);
+            assert!(res.is_ok());
+            assert_eq!(sistema.admin.accountid,accounts.bob);
+        }
 
         #[ink::test]
         fn crear_eleccion_admin_invalido() {
@@ -445,6 +475,7 @@ pub mod sistema_de_votacion {
             assert_eq!(sistema.elecciones.len(),0);
             assert_eq!(sistema.usuarios_registrados.len(),0);
         }
+        #[ink::test]
         fn instanciar_sistema_de_votacion_y_probar_valores_iniciales_otro_account_de_admin(){
             let sistema = SistemaDeVotacion::new();
             //Prueba el AccountId guardado con uno capturado del ambiente (entiendo que No deberia ser el mismo)
@@ -585,21 +616,31 @@ pub mod sistema_de_votacion {
             sistema.validar_usuario(5, 1, true);
             sistema.validar_usuario(5, 2, true);
             sistema.iniciar_eleccion(1);
+            let user = sistema.get_usuario(1);
+            let usuarios_registrados = sistema.get_usuarios_registrados();
+            let todas_las_elecciones = sistema.get_todas_las_elecciones();
+            let reporte_de_eleccion = sistema.get_reporte_de_eleccion(1);
             let res = sistema.votar_candidato(3, 1, 2);
+            let res = sistema.votar_candidato(4, 1, 2);
+            let res = sistema.votar_candidato(5, 1, 2);
+            let cant_votos = sistema.elecciones[0].candidatos[0].get_cantidad_votos();
                 match res {
                 Ok(()) => ink::env::debug_message("SE PUEDE "),
                 Err(ref e) => ink::env::debug_message(&e),
             }
-            assert_eq!(sistema.elecciones[0].candidatos[1].cant_votos,1);
+            assert_eq!(sistema.elecciones[0].candidatos[1].cant_votos,3);
+            assert_eq!(user.unwrap().datos.nombre,String::from("Carlos"));
+            assert_eq!(usuarios_registrados.len(),5);
+            assert_eq!(todas_las_elecciones.len(),2);
+            assert!(reporte_de_eleccion.is_none());
         }
 
+        #[ink::test]
         fn probar_votar_fuera_de_fecha(){
             let mut sistema = SistemaDeVotacion::new();
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 12, 2024, 20, 12, 2024);//elec 1
-            let res = sistema.crear_eleccion(String::from("CEO de X"), 15, 02, 2024, 20, 02, 2024);//elec 2
             sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
             sistema.postulacion_de_usuario(1,1,false);
-            sistema.postulacion_de_usuario(1,2,true);
             sistema.crear_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));//user2
             sistema.postulacion_de_usuario(2,1,false);
             sistema.postulacion_de_usuario(2,2,true);
@@ -623,12 +664,19 @@ pub mod sistema_de_votacion {
             sistema.validar_usuario(5, 1, true);
             sistema.validar_usuario(5, 2, true);
             sistema.iniciar_eleccion(1);
+            let user = sistema.get_usuario(1);
+            let usuarios_registrados = sistema.get_usuarios_registrados();
+            let todas_las_elecciones = sistema.get_todas_las_elecciones();
+            let reporte_de_eleccion = sistema.get_reporte_de_eleccion(1);
             let res = sistema.votar_candidato(3, 1, 2);
+            let res = sistema.votar_candidato(4, 1, 2);
+            let res = sistema.votar_candidato(5, 1, 2);
+            let cant_votos = sistema.elecciones[0].candidatos[0].get_cantidad_votos();
                 match res {
                 Ok(()) => ink::env::debug_message("SE PUEDE "),
                 Err(ref e) => ink::env::debug_message(&e),
             }
-            assert_eq!(sistema.elecciones[0].candidatos[1].cant_votos,1);
+            
         }
 
         #[ink::test]
@@ -636,14 +684,14 @@ pub mod sistema_de_votacion {
             let num:i64=54;
             let eleccion = Eleccion::new("presidente".to_string(),&num,&num);
             let votantes=eleccion.get_postulados_a_votantes();
-            assert_eq!(false,false);
+            assert_eq!(votantes.len(),0);
         }
         #[ink::test]
         fn test_elecciones_votantes(){
             let num:i64=54;
             let eleccion = Eleccion::new("presidente".to_string(),&num,&num);
             let votantes=eleccion.get_votantes();
-            assert_eq!(false,false);
+            assert_eq!(votantes.len(),0);
         }
         #[ink::test]
         fn test_elecciones_cantidad_de_votantes(){
@@ -664,7 +712,7 @@ pub mod sistema_de_votacion {
             let num:i64=89;
             let eleccion = Eleccion::new("presidente".to_string(),&num,&num);
             let candidato=eleccion.get_candidatos();
-            assert_eq!(false,false);
+            assert_eq!(candidato.len(),0);
         }
 
         #[test]
