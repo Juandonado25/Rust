@@ -443,13 +443,14 @@ pub mod sistema_de_votacion {
         }
 
         #[ink::test]
-        fn ceder_admin_con_permiso_para_hacerlo(){
+        fn intenrar_ceder_admin_sin_permisos(){
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
             let res = sistema.ceder_admin(accounts.bob);
-            assert!(res.is_ok());
-            assert_eq!(sistema.admin.accountid,accounts.bob);
+            assert!(res.is_err());
+            assert_eq!(sistema.admin.accountid,accounts.alice);
         }
 
         #[ink::test]
