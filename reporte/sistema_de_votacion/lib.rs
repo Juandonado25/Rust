@@ -153,21 +153,13 @@ pub mod sistema_de_votacion {
             let fecha_de_inicio = Self::timestamp(anio_inicio, mes_inicio, dia_inicio, 0, 0, 0);
             let fecha_de_inicio = match fecha_de_inicio {
                 Ok(dato) => dato,
-                Err(e) => {
-                    let mut err_msg = String::from("Error al crear la fecha de inicio: ");
-                    err_msg.push_str(&e);
-                    return Err(err_msg);
-                },
+                Err(_e) => return Err(String::from("No se puede convertir fecha de inicio ")),
             };
             let fecha_de_fin = Self::timestamp(anio_fin, mes_fin, dia_fin, 0, 0, 0);
             let fecha_de_fin = match fecha_de_fin {
                 Ok(dato) => dato,
-                Err(e) => {
-                    let mut err_msg = String::from("Error al crear la fecha de fin: ");
-                    err_msg.push_str(&e);
-                    return Err(err_msg);
-                },
-            };
+                Err(_e) => return Err(String::from("No se puede convertir fecha de fin ")),
+                };
         
             if fecha_de_inicio >= fecha_de_fin {
                 return Err(String::from("La fecha de inicio debe ser anterior a la fecha de fin"));
@@ -367,11 +359,6 @@ pub mod sistema_de_votacion {
         
         #[ink(message)]
         pub fn crear_usuario(&mut self, nombre:String, apellido:String, dni:String){
-            let usuario = Usuario::new(nombre, apellido, dni,Self::env().account_id(), self.elecciones.len() as i16);
-            self.usuarios_registrados.push(usuario);
-        }
-
-        fn _crear_usuario(&mut self, nombre:String, apellido:String, dni:String){
             let usuario = Usuario::new(nombre, apellido, dni,Self::env().account_id(), self.elecciones.len() as i16);
             self.usuarios_registrados.push(usuario);
         }
