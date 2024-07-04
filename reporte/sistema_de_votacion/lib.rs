@@ -469,10 +469,17 @@ pub mod sistema_de_votacion {
         #[ink::test]
         fn crear_eleccion_valida(){
             let mut sistema = SistemaDeVotacion::new();            
-            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);
-            let res = sistema.crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024);
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 01, 2024, 20, 02, 2024);
+            let res = sistema.crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 04, 2024);
             assert!(res.is_ok());
             assert_eq!(sistema.elecciones.len(),2);
+        }
+
+        #[ink::test]
+        fn rompre_crear_eleccion_timestamp_invalido(){
+            let mut sistema = SistemaDeVotacion::new();            
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 13, 1969, 20, 14, 2024);
+           
         }
 
         #[ink::test]
@@ -496,8 +503,8 @@ pub mod sistema_de_votacion {
         #[ink::test]
         fn probando_acceso_con_getter_a_eleccion_en_la_posicion_deseada(){
             let mut sistema = SistemaDeVotacion::new();
-            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);
-            let res = sistema.crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 03, 2024);
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 06, 2024);
+            let res = sistema.crear_eleccion(String::from("CEO de X"), 15, 07, 2024, 20, 08, 2024);
             sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));
             sistema.crear_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));
             sistema.crear_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));
@@ -510,7 +517,7 @@ pub mod sistema_de_votacion {
         #[ink::test]
         fn postulacion_de_usuario(){
             let mut sistema = SistemaDeVotacion::new();
-            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);//elec 1
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 10, 2024, 20, 11, 2024);//elec 1
             sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
             sistema.postulacion_de_usuario(1,1,false);
             assert_eq!(sistema.elecciones[0].postulados_a_candidatos[0].dato.nombre,String::from("Carlos"));
@@ -519,7 +526,7 @@ pub mod sistema_de_votacion {
         #[ink::test]
         fn vallidacion_de_usuario(){
             let mut sistema = SistemaDeVotacion::new();
-            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 05, 2024);//elec 1
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 11, 2024, 20, 12, 2024);//elec 1
             sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
             sistema.postulacion_de_usuario(1,1,false);
             sistema.validar_usuario(1, 1, true);
