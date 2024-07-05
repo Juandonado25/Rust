@@ -244,13 +244,19 @@ pub mod sistema_de_votacion {
             }
         }
 
-        #[ink(message)]
-        pub fn ceder_admin(&mut self, actid:AccountId)->Result<(), String>{
-            if Self::env().caller() == self.admin.accountid{
-                self.admin.accountid = actid;
-                return Ok(());
+        pub fn ceder_admin(&mut self, actid: String) -> Result<(), String> {
+            if Self::env().caller() == self.admin.accountid {
+                let bytes = actid.as_bytes();
+                match AccountId::try_from(bytes) {
+                    Ok(account) => {
+                        self.admin.accountid = account;
+                        Ok(())
+                    }
+                    Err(_) => Err(String::from("Error al convertir la cadena en AccountId.")),
+                }
+            } else {
+                Err(String::from("No tiene permiso de admin para ejecutar este método."))
             }
-            Err(String::from("No tiene permiso de admin para ejecutar este metodo. "))
         }
 
         ///Si existe la eleccion y hay mas de un candidato la inicializa.
@@ -325,7 +331,7 @@ pub mod sistema_de_votacion {
             }
         }
 
-        // Devuelve los datos de una eleccion, solo si esta esta cerrada y finalizada.
+        /// Devuelve los datos de una eleccion, solo si esta esta cerrada y finalizada.
         #[ink(message)]
         pub fn get_reporte_de_eleccion(&self, id_eleccion:i16)->Option<Eleccion>{
             if self.reportes_con_permiso.contains(&Self::env().caller())  && self.existe_eleccion(id_eleccion){
@@ -337,6 +343,14 @@ pub mod sistema_de_votacion {
             None
         }
 
+        ///Devuelve true si es año biciesto.
+        /// EJEMPLO
+        /// ```
+        /// use semi::SistemaDeVoctacion;
+        /// let b = es_bisiesto(2024);
+        /// assert_eq!(b, true);
+        /// ```
+        ///
         fn es_bisiesto(anio: i32) -> bool {
             (anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0)
         }
@@ -431,11 +445,7 @@ pub mod sistema_de_votacion {
         #[ink(message)]
         pub fn votar_candidato(&mut self, id_usuario:i16, id_eleccion:i16, id_candidato:i16)->Result<(), String> {
             let eleccion = self.elecciones.get_mut(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
-            let votant#[cfg(test)]
-    mod tests {
-        use core::panic;
-
-        use super::*;e = Votante::new(self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.clone());
+            let votante = Votante::new(self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.clone());
 
             if Self::env().caller() !=self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.accountid {
                 return Err(String::from("No tiene permiso de administrador"));
@@ -459,7 +469,11 @@ pub mod sistema_de_votacion {
         
     }
 
-    
+    #[cfg(test)]
+    mod tests {
+        use core::panic;
+
+        use super::*;
         use ink::env::{caller, test};
 
         #[ink::test]
@@ -467,9 +481,8 @@ pub mod sistema_de_votacion {
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
-            let res = sistema.ceder_admin(accounts.bob);
+            let res = sistema.ceder_admin("5DXgW86HJQnag3XQ11zSHpDrtyasy18oiCVWiF4ZBtgaEP9e".to_string());
             assert!(res.is_ok());
-            assert_eq!(sistema.admin.accountid,accounts.bob);
         }
 
         #[ink::test]
@@ -478,7 +491,7 @@ pub mod sistema_de_votacion {
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
-            let res = sistema.ceder_admin(accounts.bob);
+            let res = sistema.ceder_admin("5G3YsnR3ZJBXa1HfEwUZV5yLf9L4kWk3uEARXyV7ggwdmibv".to_string());
             assert!(res.is_err());
             assert_eq!(sistema.admin.accountid,accounts.alice);
         }

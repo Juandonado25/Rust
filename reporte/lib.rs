@@ -141,5 +141,24 @@ mod reporte {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
+
+        #[ink::test]
+        fn instanciar_reporte() {
+        // Emular entorno de ejecución con cuentas predeterminadas
+        let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+        
+        // Crear una instancia del sistema de votación (simulado)
+        let sistema_de_votacion = SistemaDeVotacion::new();
+
+        // Convertir la instancia a una referencia del contrato
+        let sistema_de_votacion_ref = SistemaDeVotacionRef::from_account_id(accounts.alice);
+
+        // Instanciar el contrato Reporte con la referencia al sistema de votación
+        let reporte = Reporte::new(sistema_de_votacion_ref);
+
+        // Ejemplo de aserción: Verificar alguna propiedad del contrato Reporte
+        assert_eq!(reporte.sistema_de_votacion, sistema_de_votacion_ref);
+    }
     }
 }
