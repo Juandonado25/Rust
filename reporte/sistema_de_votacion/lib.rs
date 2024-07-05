@@ -305,15 +305,26 @@ pub mod sistema_de_votacion {
             }
                 }
 
-            #[ink(message)]
-            pub fn ceder_admin(&mut self, actid: AccountId) -> Result<(), String> {
-                if Self::env().caller() == self.admin.accountid {
-                    self.admin.accountid=actid;
-                    Ok(())
-                } else {
-                    Err(String::from("No tiene permiso de admin para ejecutar este método."))
-                }
+        ///Recibe un AccountId y lo asigna como administrador.
+        ///Funciona solo si el es el administrador quien lo llama, de caso contrario da error.
+        /// EJEMPLO
+        /// ```
+        /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
+        /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+        /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+        /// let mut sistema = SistemaDeVotacion::new();
+        /// let r = sistema.ceder_admin(accounts.charlie);
+        /// ```
+        /// 
+        #[ink(message)]
+        pub fn ceder_admin(&mut self, actid: AccountId) -> Result<(), String> {
+            if Self::env().caller() == self.admin.accountid {
+                self.admin.accountid=actid;
+                Ok(())
+            } else {
+                Err(String::from("No tiene permiso de admin para ejecutar este método."))
             }
+        }
 
         ///Si existe la eleccion y hay mas de un candidato la inicializa.
         
