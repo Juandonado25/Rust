@@ -24,7 +24,6 @@ pub mod sistema_de_votacion {
         inicio:i64,
         fin:i64,
         abierta:bool,
-        finalizada:bool, //sirve para saber si esta cerrada porque finalizo o nunca empezo.
         postulados_a_votantes:Vec<Votante>,
         votantes:Vec<Votante>,
         postulados_a_candidatos:Vec<Candidato>,
@@ -33,7 +32,7 @@ pub mod sistema_de_votacion {
 
     impl Eleccion{
         pub fn new(cargo:String,inicio:&i64, fin:&i64)->Self{
-            Self{cargo,inicio:*inicio,fin:*fin,abierta:false,postulados_a_votantes:Vec::new(),postulados_a_candidatos:Vec::new(), finalizada:false ,votantes:Vec::new(),candidatos:Vec::new()}
+            Self{cargo,inicio:*inicio,fin:*fin,abierta:false,postulados_a_votantes:Vec::new(),postulados_a_candidatos:Vec::new(),votantes:Vec::new(),candidatos:Vec::new()}
         }
 
         pub fn get_postulados_a_votantes(&self)->Vec<Votante>{
@@ -292,7 +291,7 @@ pub mod sistema_de_votacion {
             else{
                 if self.elecciones.len()>=id as usize {
                     let eleccion=self.elecciones.get(id.checked_sub(1).unwrap() as usize).unwrap();
-                    if eleccion.abierta==false && eleccion.finalizada==false{
+                    if eleccion.abierta==false{
                         true
                     }
                     else{
@@ -441,9 +440,7 @@ pub mod sistema_de_votacion {
         pub fn get_reporte_de_eleccion(&self, id_eleccion:i16)->Option<Eleccion>{
             if self.reportes_con_permiso.contains(&Self::env().caller())  && self.existe_eleccion(id_eleccion){
                 let eleccion = self.elecciones.get(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
-                if eleccion.finalizada{
-                    return Some(eleccion.clone())
-                }
+                return Some(eleccion.clone())
             }
             None
         }
@@ -882,6 +879,31 @@ pub mod sistema_de_votacion {
             assert_eq!(postulados[0].dato.nombre, String::from("Juan"));
             assert_eq!(postulados[0].dato.apellido, String::from("Perez"));
             assert_eq!(postulados[0].dato.dni, String::from("12345678"));
+        }
+        #[ink::test]
+        fn test_aprobar_reporte_ok() {
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            sistema.set_accountid(accounts.bob);
+
+            let result = sistema.aprobar_reporte(1);
+
+            assert!(result);
+            assert!(sistema.esta_reporte_aprobado(accounts.bob));
+        }
+
+        #[ink::test]
+        fn test_aprobar_reporte_invalido() {
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            sistema.set_accountid(accounts.bob);
+
+            let result = sistema.aprobar_reporte(2); 
+
+            assert!(!result);
+            assert!(!sistema.esta_reporte_aprobado(accounts.bob));
         }
     }
     //cargo tarpaulin --target-dir src/coverage --skip-clean --exclude-files = target/debug/* --out html
