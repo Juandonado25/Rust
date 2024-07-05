@@ -417,7 +417,7 @@ pub mod sistema_de_votacion {
                 return Err(String::from("no existe el candidato "));
             }
             
-            if (Self::env().block_timestamp()>eleccion.inicio as u64) && (Self::env().clone().block_timestamp()>eleccion.fin as u64){
+            if (Self::env().block_timestamp()<(eleccion.inicio as u64)) && (Self::env().block_timestamp()>(eleccion.fin as u64)){
                 return Err(String::from("Votacion fuera de fecha "));
             }
             
@@ -443,7 +443,7 @@ pub mod sistema_de_votacion {
         }
 
         #[ink::test]
-        fn intenrar_ceder_admin_sin_permisos(){
+        fn intentar_ceder_admin_sin_permisos(){
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
@@ -647,37 +647,23 @@ pub mod sistema_de_votacion {
             sistema.postulacion_de_usuario(2,2,true);
             sistema.crear_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));//user3
             sistema.postulacion_de_usuario(3,1,true);
-            sistema.postulacion_de_usuario(3,2,true);
             sistema.crear_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));//user4
             sistema.postulacion_de_usuario(4,1,true);
-            sistema.postulacion_de_usuario(4,2,false);
             sistema.crear_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));//user5
             sistema.postulacion_de_usuario(5,1,true);
-            sistema.postulacion_de_usuario(5,2,false);
             sistema.validar_usuario(1, 1, true);
-            sistema.validar_usuario(1, 2, true);
             sistema.validar_usuario(2, 1, true);
-            sistema.validar_usuario(2, 2, true);
             sistema.validar_usuario(3, 1, true);
-            sistema.validar_usuario(3, 2, true);
             sistema.validar_usuario(4, 1, true);
-            sistema.validar_usuario(4, 2, true);
             sistema.validar_usuario(5, 1, true);
-            sistema.validar_usuario(5, 2, true);
             sistema.iniciar_eleccion(1);
             let user = sistema.get_usuario(1);
-            let usuarios_registrados = sistema.get_usuarios_registrados();
-            let todas_las_elecciones = sistema.get_todas_las_elecciones();
-            let reporte_de_eleccion = sistema.get_reporte_de_eleccion(1);
             let res = sistema.votar_candidato(3, 1, 2);
-            let res = sistema.votar_candidato(4, 1, 2);
-            let res = sistema.votar_candidato(5, 1, 2);
-            let cant_votos = sistema.elecciones[0].candidatos[0].get_cantidad_votos();
-                match res {
+            match res {
                 Ok(()) => ink::env::debug_message("SE PUEDE "),
                 Err(ref e) => ink::env::debug_message(&e),
             }
-            
+            assert!(res.is_err()); 
         }
 
         #[ink::test]
