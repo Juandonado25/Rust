@@ -2,6 +2,7 @@
 pub use self::sistema_de_votacion::SistemaDeVotacionRef;
 #[ink::contract]
 pub mod sistema_de_votacion {
+    use bs58;
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
     #[derive(scale::Decode, scale::Encode,Debug,Clone)]
@@ -307,8 +308,12 @@ pub mod sistema_de_votacion {
 
         pub fn ceder_admin(&mut self, actid: String) -> Result<(), String> {
             if Self::env().caller() == self.admin.accountid {
-                let bytes = actid.as_bytes();
-                match AccountId::try_from(bytes) {
+                let decoded = bs58::decode(actid).into_vec();
+                let bytes = match decoded {
+                    Ok(account) => *account,
+                    Err(_) => return Err(String::from("Error al convertir la cadena en AccountId.")),
+                };
+                match AccountId::try_from(&bytes) {
                     Ok(account) => {
                         self.admin.accountid = account;
                         Ok(())
