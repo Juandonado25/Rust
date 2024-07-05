@@ -658,6 +658,9 @@ pub mod sistema_de_votacion {
             sistema.validar_usuario(5, 1, true);
             sistema.iniciar_eleccion(1);
             let user = sistema.get_usuario(1);
+            let timeblock = ink::env::block_timestamp::<ink::env::DefaultEnvironment>();
+            ink::env::debug_message(&timeblock.to_string());
+            ink::env::debug_message("    ");
             let res = sistema.votar_candidato(3, 1, 2);
             match res {
                 Ok(()) => ink::env::debug_message("SE PUEDE "),
