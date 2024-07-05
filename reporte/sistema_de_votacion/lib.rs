@@ -2,7 +2,8 @@
 pub use self::sistema_de_votacion::SistemaDeVotacionRef;
 #[ink::contract]
 pub mod sistema_de_votacion {
-    use ink::prelude::string::String;
+    use ink::prelude::string::ToString;
+    use ink::prelude::string::String;   
     use ink::prelude::vec::Vec;
     #[derive(scale::Decode, scale::Encode,Debug,Clone)]
     #[cfg_attr(
@@ -563,8 +564,11 @@ pub mod sistema_de_votacion {
                 return Err(String::from("no existe el candidato "));
             }
             
-            if (Self::env().block_timestamp()<(eleccion.inicio as u64)) || (Self::env().block_timestamp()>(eleccion.fin as u64)){
-                return Err(String::from("Votacion fuera de fecha "));
+            if (Self::env().block_timestamp() < eleccion.inicio as u64) || (Self::env().block_timestamp() > eleccion.fin as u64) {
+                let block_timestamp = Self::env().block_timestamp();
+                let mut error_message = String::from("Votación fuera de fecha, timestamp del block: ");
+                error_message.push_str(&block_timestamp.to_string());
+                return Err(error_message);
             }
             
             eleccion.candidatos[id_candidato.checked_sub(1).unwrap() as usize].cant_votos = eleccion.candidatos[id_candidato.checked_sub(1).unwrap() as usize].cant_votos.checked_add(1).unwrap();
@@ -904,6 +908,34 @@ pub mod sistema_de_votacion {
 
             assert!(!result);
             assert!(!sistema.esta_reporte_aprobado(accounts.bob));
+        }
+
+        #[ink::test]
+        fn test_existe_eleccion_false() {
+            let accounts =  ink::env::test::default_accounts::< ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::< ink::env::DefaultEnvironment>(accounts.alice);
+            let sistema = SistemaDeVotacion::new();
+
+            let result = sistema.existe_eleccion(1);
+
+            assert!(!result);
+        }
+
+        #[ink::test]
+        fn test_get_reportes_aprobados() {
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            sistema.set_accountid(accounts.frank);
+            sistema.set_accountid(accounts.django);
+            sistema.aprobar_reporte(1);
+            sistema.aprobar_reporte(1);
+            let reportes_aprobados = sistema.get_reportes_aprobados();
+
+            let mut vec_normal : Vec<AccountId> = Vec::new();
+            vec_normal.push(accounts.frank);
+            vec_normal.push(accounts.django);
+            assert_eq!(reportes_aprobados, vec_normal);
         }
     }
     //cargo tarpaulin --target-dir src/coverage --skip-clean --exclude-files = target/debug/* --out html
