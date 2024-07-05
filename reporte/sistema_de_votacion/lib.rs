@@ -2,7 +2,6 @@
 pub use self::sistema_de_votacion::SistemaDeVotacionRef;
 #[ink::contract]
 pub mod sistema_de_votacion {
-    use bs58;
     use ink::prelude::string::String;
     use ink::prelude::vec::Vec;
     #[derive(scale::Decode, scale::Encode,Debug,Clone)]
@@ -138,9 +137,9 @@ pub mod sistema_de_votacion {
         elecciones:Vec<Eleccion>,
     }
     impl SistemaDeVotacion {
-        /// Instancia el sistema de votacion.
-        /// lo setea con valores iniciales y asigna el accountid del administrador
-        /// EJEMPLO:
+        /// - Instancia el sistema de votacion.
+        ///  - lo setea con valores iniciales y asigna el accountid del administrador.
+        /// - EJEMPLO:
         /// ```
         /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
@@ -304,26 +303,17 @@ pub mod sistema_de_votacion {
                     false
                 }
             }
-        }
-
-        pub fn ceder_admin(&mut self, actid: String) -> Result<(), String> {
-            if Self::env().caller() == self.admin.accountid {
-                let decoded = bs58::decode(actid).into_vec();
-                let bytes = match decoded {
-                    Ok(account) => *account,
-                    Err(_) => return Err(String::from("Error al convertir la cadena en AccountId.")),
-                };
-                match AccountId::try_from(&bytes) {
-                    Ok(account) => {
-                        self.admin.accountid = account;
-                        Ok(())
-                    }
-                    Err(_) => Err(String::from("Error al convertir la cadena en AccountId.")),
                 }
-            } else {
-                Err(String::from("No tiene permiso de admin para ejecutar este método."))
+
+            #[ink(message)]
+            pub fn ceder_admin(&mut self, actid: AccountId) -> Result<(), String> {
+                if Self::env().caller() == self.admin.accountid {
+                    self.admin.accountid=actid;
+                    Ok(())
+                } else {
+                    Err(String::from("No tiene permiso de admin para ejecutar este método."))
+                }
             }
-        }
 
         ///Si existe la eleccion y hay mas de un candidato la inicializa.
         
@@ -582,14 +572,15 @@ pub mod sistema_de_votacion {
         use super::*;
         use ink::env::{caller, test};
 
-        // #[ink::test]
-        // fn ceder_admin_con_permiso_para_hacerlo(){
-        //     let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-        //     ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
-        //     let mut sistema = SistemaDeVotacion::new();
-        //     let res = sistema.ceder_admin("5DXgW86HJQnag3XQ11zSHpDrtyasy18oiCVWiF4ZBtgaEP9e".to_string());
-        //     assert!(res.is_ok());
-        // }
+        #[ink::test]
+        fn ceder_admin_con_permiso_para_hacerlo(){
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            let res = sistema.ceder_admin(accounts.bob);
+            assert!(res.is_ok());
+            assert_eq!(sistema.admin.accountid, accounts.bob);
+        }
 
         #[ink::test]
         fn intentar_ceder_admin_sin_permisos(){
@@ -597,7 +588,7 @@ pub mod sistema_de_votacion {
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
-            let res = sistema.ceder_admin("5G3YsnR3ZJBXa1HfEwUZV5yLf9L4kWk3uEARXyV7ggwdmibv".to_string());
+            let res = sistema.ceder_admin(accounts.charlie);
             assert!(res.is_err());
             assert_eq!(sistema.admin.accountid,accounts.alice);
         }
