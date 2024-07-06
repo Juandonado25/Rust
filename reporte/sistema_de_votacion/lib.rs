@@ -736,7 +736,6 @@ pub mod sistema_de_votacion {
             }
             assert!(matches!(res, Err(ref e) if e == "No tienes permiso para crear una elección"));
         }
-
         
         #[ink::test]
         fn instanciar_sistema_de_votacion_y_probar_valores_iniciales(){
@@ -761,6 +760,28 @@ pub mod sistema_de_votacion {
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 01, 2024, 20, 02, 2024);
             let res = sistema.crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 04, 2024);
             assert!(res.is_ok());
+            assert_eq!(sistema.elecciones.len(),2);
+        }
+        #[ink::test]
+        fn eliminar_eleccion_valida(){
+            let mut sistema = SistemaDeVotacion::new();            
+            sistema.crear_eleccion(String::from("CEO de Intel"), 15, 01, 2024, 20, 02, 2024);
+            sistema.crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 04, 2024);
+            sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema.postulacion_de_usuario(1,1,false);
+            sistema.postulacion_de_usuario(1,2,false);
+            let res = sistema.eliminar_eleccion(2);
+            assert!(res.is_ok());
+            assert_eq!(sistema.elecciones.len(),1);
+            assert_eq!(sistema.usuarios_registrados[0].participacion.len(),1);
+        }
+        #[ink::test]
+        fn eliminar_eleccion_invalida(){
+            let mut sistema = SistemaDeVotacion::new();            
+            sistema.crear_eleccion(String::from("CEO de Intel"), 15, 01, 2024, 20, 02, 2024);
+            sistema.crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 04, 2024);
+            let res = sistema.eliminar_eleccion(5);
+            assert!(res.is_err());
             assert_eq!(sistema.elecciones.len(),2);
         }
 
