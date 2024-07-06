@@ -149,8 +149,8 @@ pub mod sistema_de_votacion {
         
         //METODOS ADMINISTRADOR
 
-        ///Crea una eleccion y la agrega al sistema.
-        /// EJEMPLO
+        /// - Crea una eleccion y la agrega al sistema.
+        /// - EJEMPLO:
         /// ```
         /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
@@ -200,6 +200,34 @@ pub mod sistema_de_votacion {
             Ok(())
         }
 
+        /// - Elimina una eleccion del sistema.
+        /// - EJEMPLO:
+        /// ```
+        /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
+        /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+        /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+        /// let mut sistema = SistemaDeVotacion::new();
+        /// let r = sistema.eliminar_eleccion(1);
+        /// ```
+        /// 
+        #[ink(message)]
+        pub fn eliminar_eleccion(&mut self, id_eleccion:i32) -> Result<(), String> {
+
+            if id_eleccion as usize>self.elecciones.len()||id_eleccion<1{
+                return Err(String::from("Id de eleccion invalido"));
+            }
+
+            if Self::env().caller()  != self.admin.accountid {
+                return Err(String::from("No tienes permiso para crear una elección"));
+            }
+        
+            self.elecciones.remove((id_eleccion.checked_sub(1).unwrap())as usize);
+            for e in self.usuarios_registrados.iter_mut() {
+                e.participacion.remove((id_eleccion.checked_sub(1).unwrap())as usize);
+            }
+            Ok(())
+        }
+
         ///Retorna true si el id de la eleccion es valida.
         fn existe_eleccion(&self,id:i16)->bool{
             if id==0{
@@ -231,9 +259,9 @@ pub mod sistema_de_votacion {
             false
         }
 
-        ///Recibe un AccountId y lo asigna como administrador.
-        ///Funciona solo si el es el administrador quien lo llama, de caso contrario da error.
-        /// EJEMPLO
+        /// - Recibe un AccountId y lo asigna como administrador.
+        /// - Funciona solo si el es el administrador quien lo llama, de caso contrario da error.
+        /// - EJEMPLO
         /// ```
         /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
@@ -252,7 +280,7 @@ pub mod sistema_de_votacion {
             }
         }
 
-        /// - retorna true si se pudo validar con exito, false en caso contrario.
+        /// - Retorna true si se pudo validar con exito, false en caso contrario.
         /// - Valida solo si el usuario esta postulado para esa eleccion.
         /// - EJEMPLO:
         /// ```
