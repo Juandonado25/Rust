@@ -25,11 +25,11 @@ mod reporte {
             }
         }
         /// settea la cantidad de votos 
-        pub fn set_cantidad_votos_emitidos(&mut self, cantidad:i16) {
+        pub fn agregar_cantidad_votos_emitidos(&mut self, cantidad:i16) {
             self.cantidad_votos_emitidos = cantidad;
         }
         ///setea el pocentaje de votacion 
-        pub fn set_porcentaje_de_votacion(&mut self, porcentaje:i16) {
+        pub fn agregar_porcentaje_de_votacion(&mut self, porcentaje:i16) {
             self.porcentaje_de_votacion = porcentaje;
         }
     }
@@ -53,11 +53,11 @@ mod reporte {
             }
         }
         ///setea los votantes registrados
-        pub fn set_registrados(&mut self, registrados: Vec<sistema_de_votacion::sistema_de_votacion::Votante>) {
+        pub fn agregar_registrados(&mut self, registrados: Vec<sistema_de_votacion::sistema_de_votacion::Votante>) {
             self.registrados = registrados;
         }
         ///setea los votantes aprobados 
-        pub fn set_aprobados(&mut self, aprobados: Vec<sistema_de_votacion::sistema_de_votacion::Votante>) {
+        pub fn agregar_aprobados(&mut self, aprobados: Vec<sistema_de_votacion::sistema_de_votacion::Votante>) {
             self.aprobados = aprobados;
         }
     }
@@ -78,14 +78,14 @@ mod reporte {
         /// Pide permiso para generar reportes.
         #[ink(message)]
         pub fn pedir_permiso_de_reportar(&mut self){
-            self.sistema_de_votacion.set_accountid_de_reporte(Self::env().caller());
+            self.sistema_de_votacion.agregar_accountid_de_reporte(Self::env().caller());
         }
           /// Devuelve los datos de una eleccion, solo si esta esta cerrada y finalizada.
         /// EJEMPLO
         /// ```
         /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-        /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+        /// ink::env::test::agregar_caller::<ink::env::DefaultEnvironment>(accounts.alice);
         /// let sistema = SistemaDeVotacion::new();
         /// let r = sistema.get_reporte_de_eleccion(3);
         /// ```
@@ -93,7 +93,7 @@ mod reporte {
         ///Obtiene una eleccion del sistema(se le pasa el id de una eleccion y busca si existe), tiene que estar cerrada
         #[ink(message)]
         pub fn get_reporte_de_eleccion(&self,id_eleccion:i16) -> Result<sistema_de_votacion::sistema_de_votacion::Eleccion, String>{
-            let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
+            let eleccion = self.sistema_de_votacion.obtener_reporte_de_eleccion(id_eleccion);
             let eleccion = match eleccion{
                 Ok(dato) => dato,
                 Err(e) => return Err(e),
@@ -126,7 +126,7 @@ mod reporte {
         /// ```
         #[ink(message)]
         pub fn reporte_de_eleccion(&self,id_eleccion:i16) ->Result<Votantes,String>{
-            let reporte=self.sistema_de_votacion.get_reportes_aprobados();
+            let reporte=self.sistema_de_votacion.obtener_reportes_aprobados();
             let reporte = match reporte{
                 Ok(dato) => dato,
                 Err(e) => return Err(e),
@@ -136,11 +136,11 @@ mod reporte {
             };
 
             let mut votantes=Votantes::new();
-            let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
+            let eleccion = self.sistema_de_votacion.obtener_reporte_de_eleccion(id_eleccion);
             match eleccion {
                 Ok(elec) => {
-                    votantes.set_registrados(elec.get_postulados_a_votantes());
-                    votantes.set_aprobados(elec.get_votantes());
+                    votantes.agregar_registrados(elec.get_postulados_a_votantes());
+                    votantes.agregar_aprobados(elec.get_votantes());
                     return Ok(votantes)
                 }
                 Err(e)=> return Err(e),
@@ -172,7 +172,7 @@ mod reporte {
         /// ```
         #[ink(message)]
         pub fn reporte_de_participacion(&self,id_eleccion:i16) -> Result<Participacion,String>{
-            let reporte=self.sistema_de_votacion.get_reportes_aprobados();
+            let reporte=self.sistema_de_votacion.obtener_reportes_aprobados();
             let reporte = match reporte{
                 Ok(dato) => dato,
                 Err(e) => return Err(e),
@@ -181,13 +181,13 @@ mod reporte {
                 return Err(String::from("El contract no tiene permiso para obtener el reporte"));
             };
             let mut participacion=Participacion::new();
-            let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
+            let eleccion = self.sistema_de_votacion.obtener_reporte_de_eleccion(id_eleccion);
             match eleccion {
                 Ok(elec) => {
                     let cantidad=elec.get_cantidad_de_votos_emitidos();
-                    participacion.set_cantidad_votos_emitidos(cantidad);
+                    participacion.agregar_cantidad_votos_emitidos(cantidad);
                     let porcentaje=elec.get_cantidad_de_votantes().checked_div(cantidad).unwrap();
-                    participacion.set_porcentaje_de_votacion(porcentaje);
+                    participacion.agregar_porcentaje_de_votacion(porcentaje);
                     return Ok(participacion)
                 }
                 Err(e)=>return Err(e),
@@ -217,7 +217,7 @@ mod reporte {
         /// ```
         #[ink(message)]
         pub fn reporte_de_resultado(&self,id_eleccion:i16) -> Result<Vec<sistema_de_votacion::sistema_de_votacion::Candidato>,String>{
-            let reporte=self.sistema_de_votacion.get_reportes_aprobados();
+            let reporte=self.sistema_de_votacion.obtener_reportes_aprobados();
             let reporte = match reporte{
                 Ok(dato) => dato,
                 Err(e) => return Err(e),
@@ -227,7 +227,7 @@ mod reporte {
             };
 
             let mut resultado: Vec<sistema_de_votacion::sistema_de_votacion::Candidato>=Vec::new();
-            let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
+            let eleccion = self.sistema_de_votacion.obtener_reporte_de_eleccion(id_eleccion);
             match eleccion {
                 Ok(elec) => {
                     resultado=elec.get_candidatos();

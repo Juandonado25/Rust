@@ -5,15 +5,6 @@ pub mod sistema_de_votacion {
     use ink::prelude::string::ToString;
     use ink::prelude::string::String;   
     use ink::prelude::vec::Vec;
-    #[derive(scale::Decode, scale::Encode,Debug,Clone)]
-    #[cfg_attr(
-        feature = "std",
-        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-    )]
-    pub enum Error{
-        FechaInvalida,
-        AdminInvalido,
-    }
 
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
@@ -145,7 +136,6 @@ pub mod sistema_de_votacion {
         /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
         /// let sistema = SistemaDeVotacion::new();
         /// ```
-        
         #[ink(constructor)]
         pub fn new() -> Self {
             Self { 
@@ -294,6 +284,69 @@ pub mod sistema_de_votacion {
             false
         }
 
+        /// - Aprueba un reporte que pidio permiso para acceder al sistema. el parametro es usado para acceder al permiso por orden de llegada.
+        /// - EJEMPLO:
+        /// ```
+        /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
+        /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+        /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+        /// let mut sistema = SistemaDeVotacion::new();
+        /// let r = sistema.aprobar_reporte(3);
+        /// ```
+        /// 
+        #[ink(message)]
+        pub fn aprobar_reporte(&mut self,id:i16)->Result<(), String>{
+            if self.reporte_sin_permiso.len()<id as usize{
+                return Err(String::from("El id proporcionado no es valido"));
+            }
+            if id > 0 &&Self::env().caller() != self.admin.accountid{
+                return Err(String::from("No tiene permiso de administrador"));
+            }
+            
+            let account = self.reporte_sin_permiso.remove((id.checked_sub(1).unwrap())as usize);
+            self.reportes_con_permiso.push(account);
+            Ok(())
+        }
+        
+
+        /// - Rechaza un reporte que pidio permiso para acceder al sistema. el parametro es usado para acceder al permiso por orden de llegada.
+        /// - EJEMPLO:
+        /// ```
+        /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
+        /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+        /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+        /// let mut sistema = SistemaDeVotacion::new();
+        /// let r = sistema.rechazar_reporte(3);
+        /// ```
+        /// 
+        #[ink(message)]
+        pub fn rechazar_reporte(&mut self,id:i16)->Result<(), String>{
+            if self.reporte_sin_permiso.len()<id as usize{
+                return Err(String::from("El id proporcionado no es valido"));
+            }
+            if id > 0 &&Self::env().caller() != self.admin.accountid{
+                return Err(String::from("No tiene permiso de administrador"));
+            }
+            
+            self.reporte_sin_permiso.remove((id.checked_sub(1).unwrap())as usize);
+            Ok(())
+        }
+
+        /// - Agrega al sistema la peticion de permiso de un reporte para poder acceder.
+        /// - EJEMPLO:
+        /// ```
+        /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
+        /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+        /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+        /// let mut sistema = SistemaDeVotacion::new();
+        /// let r = sistema.agregar_accountid_de_reporte(accounts.bob);
+        /// ```
+        /// 
+        #[ink(message)]
+        pub fn agregar_accountid_de_reporte(&mut self,id:AccountId){
+            self.reporte_sin_permiso.push(id);
+        }
+
         /// - Obtiene un usuario del sistema.
         /// - EJEMPLO:
         /// ```
@@ -301,11 +354,11 @@ pub mod sistema_de_votacion {
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
         /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
         /// let mut sistema = SistemaDeVotacion::new();
-        /// let r = sistema.get_usuario(1);
+        /// let r = sistema.obtener_usuario(1);
         /// ```
         /// 
         #[ink(message)]
-        pub fn get_usuario(&self, id_usuario:i16)->Option<Usuario>{
+        pub fn obtener_usuario(&self, id_usuario:i16)->Option<Usuario>{
             if Self::env().caller() ==self.admin.accountid && id_usuario<=(self.usuarios_registrados.len() as i16){
                 return Some(self.usuarios_registrados.get(id_usuario.checked_sub(1).unwrap() as usize).unwrap().clone());
             }
@@ -314,7 +367,7 @@ pub mod sistema_de_votacion {
 
         ///Devuelve una eleccion, util para el reporte.
         #[ink(message)]
-        pub fn get_eleccion(&self, eleccion_id:i16)->Option<Eleccion>{
+        pub fn obtener_eleccion(&self, eleccion_id:i16)->Option<Eleccion>{
             if Self::env().caller() ==self.admin.accountid && eleccion_id!=0 && eleccion_id<=self.elecciones.len() as i16{
                 let elec = self.elecciones.get(eleccion_id.checked_sub(1).unwrap() as usize).unwrap();
                 return Some(elec.clone())
@@ -329,11 +382,11 @@ pub mod sistema_de_votacion {
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
         /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
         /// let mut sistema = SistemaDeVotacion::new();
-        /// let r = sistema.get_usuarios_registrados();
+        /// let r = sistema.obtener_usuarios_registrados();
         /// ```
         /// 
         #[ink(message)]
-        pub fn get_usuarios_registrados(&self)-> Vec<Usuario>{
+        pub fn obtener_usuarios_registrados(&self)-> Vec<Usuario>{
             if Self::env().caller() ==self.admin.accountid{
                 self.usuarios_registrados.clone()
             }else{
@@ -348,11 +401,11 @@ pub mod sistema_de_votacion {
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
         /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
         /// let mut sistema = SistemaDeVotacion::new();
-        /// let r = sistema.get_todas_las_elecciones();
+        /// let r = sistema.obtener_todas_las_elecciones();
         /// ```
         /// 
         #[ink(message)]
-        pub fn get_todas_las_elecciones(&self)-> Vec<Eleccion>{
+        pub fn obtener_todas_las_elecciones(&self)-> Vec<Eleccion>{
             if Self::env().caller() ==self.admin.accountid{
                 self.elecciones.clone()
             }else{
@@ -506,11 +559,11 @@ pub mod sistema_de_votacion {
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
         /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
         /// let mut sistema = SistemaDeVotacion::new();
-        /// let r = sistema.votar_candidato(1,1,2);
+        /// let r = sistema.votar_a_candidato(1,1,2);
         /// ```
         /// 
         #[ink(message)]
-        pub fn votar_candidato(&mut self, id_usuario:i16, id_eleccion:i16, id_candidato:i16)->Result<(), String> {
+        pub fn votar_a_candidato(&mut self, id_usuario:i16, id_eleccion:i16, id_candidato:i16)->Result<(), String> {
             let eleccion = self.elecciones.get_mut(id_eleccion.checked_sub(1).unwrap() as usize);
             let eleccion = match eleccion{
                 Some(dato) => dato,
@@ -550,11 +603,11 @@ pub mod sistema_de_votacion {
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
         /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
         /// let sistema = SistemaDeVotacion::new();
-        /// let r = sistema.get_reporte_de_eleccion(3);
+        /// let r = sistema.obtener_reporte_de_eleccion(3);
         /// ```
         /// 
         #[ink(message)]
-        pub fn get_reporte_de_eleccion(&self, id_eleccion:i16)->Result<Eleccion, String>{
+        pub fn obtener_reporte_de_eleccion(&self, id_eleccion:i16)->Result<Eleccion, String>{
 
             let account = Self::env().caller();
 
@@ -573,69 +626,6 @@ pub mod sistema_de_votacion {
             }
             
             Ok(eleccion.clone())
-        }
-
-        /// - Aprueba un reporte que pidio permiso para acceder al sistema. el parametro es usado para acceder al permiso por orden de llegada.
-        /// - EJEMPLO:
-        /// ```
-        /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
-        /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-        /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
-        /// let mut sistema = SistemaDeVotacion::new();
-        /// let r = sistema.aprobar_reporte(3);
-        /// ```
-        /// 
-        #[ink(message)]
-        pub fn aprobar_reporte(&mut self,id:i16)->Result<(), String>{
-            if self.reporte_sin_permiso.len()<id as usize{
-                return Err(String::from("El id proporcionado no es valido"));
-            }
-            if id > 0 &&Self::env().caller() != self.admin.accountid{
-                return Err(String::from("No tiene permiso de administrador"));
-            }
-            
-            let account = self.reporte_sin_permiso.remove((id.checked_sub(1).unwrap())as usize);
-            self.reportes_con_permiso.push(account);
-            Ok(())
-        }
-        
-
-        /// - Rechaza un reporte que pidio permiso para acceder al sistema. el parametro es usado para acceder al permiso por orden de llegada.
-        /// - EJEMPLO:
-        /// ```
-        /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
-        /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-        /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
-        /// let mut sistema = SistemaDeVotacion::new();
-        /// let r = sistema.rechazar_reporte(3);
-        /// ```
-        /// 
-        #[ink(message)]
-        pub fn rechazar_reporte(&mut self,id:i16)->Result<(), String>{
-            if self.reporte_sin_permiso.len()<id as usize{
-                return Err(String::from("El id proporcionado no es valido"));
-            }
-            if id > 0 &&Self::env().caller() != self.admin.accountid{
-                return Err(String::from("No tiene permiso de administrador"));
-            }
-            
-            self.reporte_sin_permiso.remove((id.checked_sub(1).unwrap())as usize);
-            Ok(())
-        }
-
-        /// - Agrega al sistema la peticion de permiso de un reporte para poder acceder.
-        /// - EJEMPLO:
-        /// ```
-        /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
-        /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-        /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
-        /// let mut sistema = SistemaDeVotacion::new();
-        /// let r = sistema.set_accountid_de_reporte(accounts.bob);
-        /// ```
-        /// 
-        #[ink(message)]
-        pub fn set_accountid_de_reporte(&mut self,id:AccountId){
-            self.reporte_sin_permiso.push(id);
         }
 
         /// - Devuelve true si el reporte esta habilitado para acceder al sistema.
@@ -663,11 +653,11 @@ pub mod sistema_de_votacion {
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
         /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
         /// let mut sistema = SistemaDeVotacion::new();
-        /// let r = sistema.get_reportes_aprobados();
+        /// let r = sistema.obtener_reportes_aprobados();
         /// ```
         /// 
         #[ink(message)]
-        pub fn get_reportes_aprobados(&self)->Result<Vec<AccountId>,String>{
+        pub fn obtener_reportes_aprobados(&self)->Result<Vec<AccountId>,String>{
             let account = Self::env().caller();
             if account != self.admin.accountid && !self.reportes_con_permiso.contains(&account){
                 return Err(String::from("No tiene permisos"));
@@ -785,7 +775,7 @@ pub mod sistema_de_votacion {
             sistema.crear_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));
             sistema.crear_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));
             sistema.crear_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));
-            let aux = sistema.get_eleccion(2);
+            let aux = sistema.obtener_eleccion(2);
             assert_eq!(aux.unwrap().cargo,sistema.elecciones[1].cargo);
         }
 
@@ -840,14 +830,14 @@ pub mod sistema_de_votacion {
             sistema.validar_usuario(4, 2, true);
             sistema.validar_usuario(5, 1, true);
             sistema.validar_usuario(5, 2, true);
-            let user = sistema.get_usuario(1);
-            let usuarios_registrados = sistema.get_usuarios_registrados();
-            let todas_las_elecciones = sistema.get_todas_las_elecciones();
-            let reporte_de_eleccion = sistema.get_reporte_de_eleccion(1);
+            let user = sistema.obtener_usuario(1);
+            let usuarios_registrados = sistema.obtener_usuarios_registrados();
+            let todas_las_elecciones = sistema.obtener_todas_las_elecciones();
+            let reporte_de_eleccion = sistema.obtener_reporte_de_eleccion(1);
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_719_900_000_000);
-            let res = sistema.votar_candidato(3, 1, 2);
-            let res = sistema.votar_candidato(4, 1, 2);
-            let res = sistema.votar_candidato(5, 1, 2);
+            let res = sistema.votar_a_candidato(3, 1, 2);
+            let res = sistema.votar_a_candidato(4, 1, 2);
+            let res = sistema.votar_a_candidato(5, 1, 2);
             let cant_votos = sistema.elecciones[0].candidatos[0].get_cantidad_votos();
                 match res {
                 Ok(()) => ink::env::debug_message("SE PUEDE "),
@@ -910,7 +900,7 @@ pub mod sistema_de_votacion {
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_734_000_000_000);
             let timeblock = ink::env::block_timestamp::<ink::env::DefaultEnvironment>();
             ink::env::debug_message(&format!("Current block timestamp: {}   ", timeblock));
-            let res = sistema.votar_candidato(3, 1, 2);
+            let res = sistema.votar_a_candidato(3, 1, 2);
             match res {
                 Ok(()) => ink::env::debug_message("SE PUEDE "),
                 Err(ref e) => ink::env::debug_message(&e),
@@ -962,7 +952,7 @@ pub mod sistema_de_votacion {
             sistema.crear_usuario(String::from("Juan"), String::from("Perez"), String::from("12345678"));
             sistema.crear_eleccion(String::from("Presidente"),1, 1, 2024,10, 1, 2024,);
             sistema.postulacion_de_usuario(1, 1, true);
-            let eleccion = sistema.get_eleccion(1).unwrap();
+            let eleccion = sistema.obtener_eleccion(1).unwrap();
             let postulados = eleccion.get_postulados_a_votantes();
             assert_eq!(postulados.len(), 1);
             assert_eq!(postulados[0].dato.nombre, String::from("Juan"));
@@ -974,7 +964,7 @@ pub mod sistema_de_votacion {
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
-            sistema.set_accountid_de_reporte(accounts.bob);
+            sistema.agregar_accountid_de_reporte(accounts.bob);
 
             let result = sistema.aprobar_reporte(1);
             
@@ -988,7 +978,7 @@ pub mod sistema_de_votacion {
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
-            sistema.set_accountid_de_reporte(accounts.bob);
+            sistema.agregar_accountid_de_reporte(accounts.bob);
 
             let result = sistema.aprobar_reporte(2); 
 
@@ -1008,15 +998,15 @@ pub mod sistema_de_votacion {
         }
 
         #[ink::test]
-        fn test_get_reportes_aprobados() {
+        fn test_obtener_reportes_aprobados() {
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
-            sistema.set_accountid_de_reporte(accounts.frank);
-            sistema.set_accountid_de_reporte(accounts.django);
+            sistema.agregar_accountid_de_reporte(accounts.frank);
+            sistema.agregar_accountid_de_reporte(accounts.django);
             sistema.aprobar_reporte(1);
             sistema.aprobar_reporte(1);
-            let reportes_aprobados = sistema.get_reportes_aprobados();
+            let reportes_aprobados = sistema.obtener_reportes_aprobados();
             match reportes_aprobados {
                 Ok(_) => ink::env::debug_message("SE PUEDE "),
                 Err(ref e) => ink::env::debug_message(&e),
@@ -1037,8 +1027,8 @@ pub mod sistema_de_votacion {
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
-            sistema.set_accountid_de_reporte(accounts.frank);
-            sistema.set_accountid_de_reporte(accounts.django);
+            sistema.agregar_accountid_de_reporte(accounts.frank);
+            sistema.agregar_accountid_de_reporte(accounts.django);
             assert_eq!(sistema.reporte_sin_permiso.len(),2);
             sistema.rechazar_reporte(1);
             assert_eq!(sistema.reporte_sin_permiso.len(),1);
@@ -1049,8 +1039,8 @@ pub mod sistema_de_votacion {
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
-            sistema.set_accountid_de_reporte(accounts.frank);
-            sistema.set_accountid_de_reporte(accounts.django);
+            sistema.agregar_accountid_de_reporte(accounts.frank);
+            sistema.agregar_accountid_de_reporte(accounts.django);
             assert_eq!(sistema.reporte_sin_permiso.len(),2);
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
             sistema.rechazar_reporte(1);
@@ -1062,7 +1052,7 @@ pub mod sistema_de_votacion {
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_719_900_000_000);
             let mut sistema = SistemaDeVotacion::new();
             sistema.crear_eleccion(String::from("CEO de Intel"), 01, 07, 2024, 20, 07, 2024);//elec 1
-            let res = sistema.get_reporte_de_eleccion(1);
+            let res = sistema.obtener_reporte_de_eleccion(1);
             match res {
                 Ok(_) => ink::env::debug_message("SE PUEDE "),
                 Err(ref e) => ink::env::debug_message(&e),
@@ -1076,11 +1066,11 @@ pub mod sistema_de_votacion {
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_900_900_000_000);
             let mut sistema = SistemaDeVotacion::new();
-            sistema.set_accountid_de_reporte(accounts.charlie);
+            sistema.agregar_accountid_de_reporte(accounts.charlie);
             sistema.aprobar_reporte(1);
             sistema.crear_eleccion(String::from("CEO de Intel"), 01, 07, 2024, 20, 07, 2024);//elec 1
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.charlie);
-            let res = sistema.get_reporte_de_eleccion(1);
+            let res = sistema.obtener_reporte_de_eleccion(1);
             match res {
                 Ok(_) => ink::env::debug_message("SE PUEDE "),
                 Err(ref e) => ink::env::debug_message(&e),
@@ -1094,11 +1084,11 @@ pub mod sistema_de_votacion {
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_900_900_000_000);
             let mut sistema = SistemaDeVotacion::new();
-            sistema.set_accountid_de_reporte(accounts.charlie);
+            sistema.agregar_accountid_de_reporte(accounts.charlie);
             sistema.rechazar_reporte(1);
             sistema.crear_eleccion(String::from("CEO de Intel"), 01, 07, 2024, 20, 07, 2024);//elec 1
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.charlie);
-            let res = sistema.get_reporte_de_eleccion(1);
+            let res = sistema.obtener_reporte_de_eleccion(1);
             match res {
                 Ok(_) => ink::env::debug_message("SE PUEDE "),
                 Err(ref e) => ink::env::debug_message(&e),
