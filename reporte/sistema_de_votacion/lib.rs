@@ -24,7 +24,6 @@ pub mod sistema_de_votacion {
         cargo:String,//se detalla el cargo que sera elegido en esta eleccion, informacion que puede ser relevante para el reporte.
         inicio:i64,
         fin:i64,
-        abierta:bool,
         postulados_a_votantes:Vec<Votante>,
         votantes:Vec<Votante>,
         postulados_a_candidatos:Vec<Candidato>,
@@ -33,7 +32,7 @@ pub mod sistema_de_votacion {
 
     impl Eleccion{
         pub fn new(cargo:String,inicio:&i64, fin:&i64)->Self{
-            Self{cargo,inicio:*inicio,fin:*fin,abierta:false,postulados_a_votantes:Vec::new(),postulados_a_candidatos:Vec::new(),votantes:Vec::new(),candidatos:Vec::new()}
+            Self{cargo,inicio:*inicio,fin:*fin,postulados_a_votantes:Vec::new(),postulados_a_candidatos:Vec::new(),votantes:Vec::new(),candidatos:Vec::new()}
         }
 
         pub fn get_postulados_a_votantes(&self)->Vec<Votante>{
@@ -211,6 +210,7 @@ pub mod sistema_de_votacion {
             Ok(())
         }
 
+        ///Retorna true si el id de la eleccion es valida.
         fn existe_eleccion(&self,id:i16)->bool{
             if id==0{
                 false
@@ -220,6 +220,7 @@ pub mod sistema_de_votacion {
             }
         }
 
+        /// Retorna true si el id de usuario es valido.
         fn existe_usuario(&self,id:i16)->bool{
             if id==0{
                 false
@@ -229,26 +230,16 @@ pub mod sistema_de_votacion {
             }
         }
 
-        ///retorna true se puede inscribir un usuario a esa eleccion porque existe esta cerrada.
+        /// Retorna true si la eleccion no ha empezado.
         fn eleccion_no_empezada(&self,id:i16)->bool{
-            if id==0{
-                false
-            }
-            else{
-                if self.elecciones.len()>=id as usize {
-                    let eleccion=self.elecciones.get(id.checked_sub(1).unwrap() as usize).unwrap();
-                    if eleccion.abierta==false{
-                        true
-                    }
-                    else{
-                        false
-                    }
+            if id!=0 || self.elecciones.len()>=id as usize{
+                let eleccion=self.elecciones.get(id.checked_sub(1).unwrap() as usize).unwrap();
+                if Self::env().block_timestamp() < eleccion.inicio as u64{
+                    return true;
                 }
-                else{
-                    false
-                }
-            }
-                }
+            };
+            false
+        }
 
         ///Recibe un AccountId y lo asigna como administrador.
         ///Funciona solo si el es el administrador quien lo llama, de caso contrario da error.
@@ -548,7 +539,7 @@ pub mod sistema_de_votacion {
 
         //METODOS DEL REPORTE
 
-        /// - Devuelve los datos de una eleccion, solo si esta esta cerrada.
+        /// - Devuelve los datos de una eleccion, solo si esta esta cerrada y tiene los permisos necesarios.
         /// - EJEMPLO:
         /// ```
         /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
@@ -560,13 +551,23 @@ pub mod sistema_de_votacion {
         /// 
         #[ink(message)]
         pub fn get_reporte_de_eleccion(&self, id_eleccion:i16)->Result<Eleccion, String>{
-            if !self.reportes_con_permiso.contains(&Self::env().caller()){
+
+            let account = Self::env().caller();
+
+            if account != self.admin.accountid && !self.reportes_con_permiso.contains(&account){
                 return Err(String::from("El reporte no tiene permiso para generar el reporte"));
             }
+
             if !self.existe_eleccion(id_eleccion){
                 return Err(String::from("No existe la elecion"));
             }
+
             let eleccion = self.elecciones.get(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
+
+            if Self::env().block_timestamp()<eleccion.fin as u64{
+                return Err(String::from("La eleccion aun no ha cerrado"));
+            }
+            
             Ok(eleccion.clone())
         }
 
@@ -856,7 +857,7 @@ pub mod sistema_de_votacion {
 
         #[ink::test]
         fn verificar_que_un_usuario_no_se_puede_postular_a_ambos_roles_en_una__eleccion(){
-            ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_719_900_000);
+            ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_719_900_000_000);
             let mut sistema = SistemaDeVotacion::new();
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 07, 2024, 20, 07, 2024);//elec 1
             sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
@@ -1049,6 +1050,55 @@ pub mod sistema_de_votacion {
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
             sistema.rechazar_reporte(1);
             assert_eq!(sistema.reporte_sin_permiso.len(),2);
+        }
+
+        #[ink::test]
+        fn get_reporte_eleccion_eleccion_abierta(){
+            ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_719_900_000_000);
+            let mut sistema = SistemaDeVotacion::new();
+            sistema.crear_eleccion(String::from("CEO de Intel"), 01, 07, 2024, 20, 07, 2024);//elec 1
+            let res = sistema.get_reporte_de_eleccion(1);
+            match res {
+                Ok(_) => ink::env::debug_message("SE PUEDE "),
+                Err(ref e) => ink::env::debug_message(&e),
+            }
+            assert!(res.is_err())
+        }
+
+        #[ink::test]
+        fn get_reporte_eleccion_reporte_con_permiso(){
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_900_900_000_000);
+            let mut sistema = SistemaDeVotacion::new();
+            sistema.set_accountid_de_reporte(accounts.charlie);
+            sistema.aprobar_reporte(1);
+            sistema.crear_eleccion(String::from("CEO de Intel"), 01, 07, 2024, 20, 07, 2024);//elec 1
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.charlie);
+            let res = sistema.get_reporte_de_eleccion(1);
+            match res {
+                Ok(_) => ink::env::debug_message("SE PUEDE "),
+                Err(ref e) => ink::env::debug_message(&e),
+            }
+            assert!(res.is_ok())
+        }
+
+        #[ink::test]
+        fn get_reporte_eleccion_reporte_sin_permiso(){
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_900_900_000_000);
+            let mut sistema = SistemaDeVotacion::new();
+            sistema.set_accountid_de_reporte(accounts.charlie);
+            sistema.rechazar_reporte(1);
+            sistema.crear_eleccion(String::from("CEO de Intel"), 01, 07, 2024, 20, 07, 2024);//elec 1
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.charlie);
+            let res = sistema.get_reporte_de_eleccion(1);
+            match res {
+                Ok(_) => ink::env::debug_message("SE PUEDE "),
+                Err(ref e) => ink::env::debug_message(&e),
+            }
+            assert!(res.is_err())
         }
     }
     //cargo tarpaulin --target-dir src/coverage --skip-clean --exclude-files = target/debug/* --out html
