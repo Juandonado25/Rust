@@ -292,9 +292,29 @@ pub mod sistema_de_votacion {
         /// ```
         /// 
         #[ink(message)]
-        pub fn validar_usuario(&mut self, id_usuario:i16, id_eleccion:i16, valido:bool)->bool{
-            if Self::env().caller() ==self.admin.accountid && self.existe_eleccion(id_eleccion) && self.existe_usuario(id_usuario) && valido && self.eleccion_no_empezada(id_eleccion) 
-            && self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].participacion[id_eleccion.checked_sub(1).unwrap() as usize]{
+        pub fn validar_usuario(&mut self, id_usuario:i16, id_eleccion:i16, valido:bool)->Result<(),String>{
+
+            if Self::env().caller() !=self.admin.accountid{
+                return Err(String::from("No tiene permiso de admin"));
+            }
+            
+            if !self.existe_eleccion(id_eleccion){
+                return Err(String::from("No existe una eleccion con ese id"));
+            }
+            
+            if !self.existe_usuario(id_usuario){
+                return Err(String::from("No existe usuario con ese id"));
+            }
+            
+            if !self.eleccion_no_empezada(id_eleccion){
+                return Err(String::from("Eleccio ya empezada, no se puede validar luego de empezar"));
+            } 
+
+            if !self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].participacion[id_eleccion.checked_sub(1).unwrap() as usize]{
+                return Err(String::from("IEl usuario no esta participando en la eleccion con ese id"));
+            }
+
+            if valido {
                 let vot = Votante::new(self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.clone());
                 let eleccion = self.elecciones.get_mut(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
                 if let Some(position) = eleccion.postulados_a_votantes.iter().position(|x| *x == vot.clone()) {
@@ -307,9 +327,8 @@ pub mod sistema_de_votacion {
                         eleccion.postulados_a_candidatos.remove(position);
                     }
                 }
-                return true;
             }
-            false
+            Ok(())
         }
 
         /// - Aprueba un reporte que pidio permiso para acceder al sistema. el parametro es usado para acceder al permiso por orden de llegada.
