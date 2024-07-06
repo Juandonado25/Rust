@@ -2,6 +2,7 @@
 
 #[ink::contract]
 mod reporte {
+    use ink::env::caller;
     use ink::prelude::vec::Vec;  
     use ink::prelude::string::String;   
     use sistema_de_votacion::SistemaDeVotacionRef;
@@ -73,6 +74,12 @@ mod reporte {
         #[ink(constructor)]
         pub fn new(sistema_de_votacion:SistemaDeVotacionRef) -> Self {    
             Self { sistema_de_votacion }
+        }
+        
+        /// Pide permiso para generar reportes.
+        #[ink(message)]
+        pub fn pedir_permiso_de_reportar(&mut self){
+            self.sistema_de_votacion.set_accountid_de_reporte(Self::env().caller());
         }
           /// Devuelve los datos de una eleccion, solo si esta esta cerrada y finalizada.
         /// EJEMPLO

@@ -633,6 +633,7 @@ pub mod sistema_de_votacion {
         /// let r = sistema.set_accountid_de_reporte(accounts.bob);
         /// ```
         /// 
+        #[ink(message)]
         pub fn set_accountid_de_reporte(&mut self,id:AccountId){
             self.reporte_sin_permiso.push(id);
         }
