@@ -173,7 +173,7 @@ pub mod sistema_de_votacion {
         #[ink(message)]
         pub fn crear_eleccion(&mut self, cargo: String, dia_inicio: i32, mes_inicio: i32, anio_inicio: i32, dia_fin: i32, mes_fin: i32, anio_fin: i32) -> Result<(), String> {
 
-            if ((Self::dias_en_mes(anio_inicio,mes_inicio)==0)||Self::dias_en_mes(anio_inicio,mes_inicio)<dia_inicio||dia_inicio<0){
+            if Self::dias_en_mes(anio_inicio,mes_inicio)==0||Self::dias_en_mes(anio_inicio,mes_inicio)<dia_inicio||dia_inicio<0 {
                 return Err(String::from("Fecha de inicio invalida"));
             }
 
@@ -632,9 +632,11 @@ pub mod sistema_de_votacion {
         #[ink(message)]
         pub fn get_reportes_aprobados(&self)->Result<Vec<AccountId>,String>{
             let account = Self::env().caller();
-            if account = self.admin.acountid || self.
+            if account != self.admin.accountid || !self.reportes_con_permiso.contains(&account){
+                return Err(String::from("No tiene permisos"));
+            }
             let reporte=self.reportes_con_permiso.clone();
-            reporte
+            Ok(reporte)
         }
         
     }
@@ -977,10 +979,18 @@ pub mod sistema_de_votacion {
             sistema.aprobar_reporte(1);
             sistema.aprobar_reporte(1);
             let reportes_aprobados = sistema.get_reportes_aprobados();
-
+            match reportes_aprobados {
+                Ok(_) => ink::env::debug_message("SE PUEDE "),
+                Err(ref e) => ink::env::debug_message(&e),
+            }
+            let reportes_aprobados = match reportes_aprobados{
+                Ok(dato) => dato,
+                Err(_e) => Vec::new(),
+            };
             let mut vec_normal : Vec<AccountId> = Vec::new();
             vec_normal.push(accounts.frank);
             vec_normal.push(accounts.django);
+         
             assert_eq!(reportes_aprobados, vec_normal);
         }
     }
