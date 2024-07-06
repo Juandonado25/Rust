@@ -510,11 +510,11 @@ pub mod sistema_de_votacion {
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
         /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
         /// let mut sistema = SistemaDeVotacion::new();
-        /// let r = sistema.crear_usuario(String::from("nombre"),String::from("apellido"),String::from("dni"));
+        /// let r = sistema.registrar_usuario(String::from("nombre"),String::from("apellido"),String::from("dni"));
         /// ```
         /// 
         #[ink(message)]
-        pub fn crear_usuario(&mut self, nombre:String, apellido:String, dni:String){
+        pub fn registrar_usuario(&mut self, nombre:String, apellido:String, dni:String){
             let usuario = Usuario::new(nombre, apellido, dni,Self::env().caller() , self.elecciones.len() as i16);
             self.usuarios_registrados.push(usuario);
         }
@@ -527,7 +527,7 @@ pub mod sistema_de_votacion {
         /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
         /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
         /// let mut sistema = SistemaDeVotacion::new();
-        /// let r = sistema.crear_usuario(String::from("nombre"),String::from("apellido"),String::from("dni"));
+        /// let r = sistema.registrar_usuario(String::from("nombre"),String::from("apellido"),String::from("dni"));
         /// let r = sistema.postulacion_de_usuario(1,1,true);
         /// ```
         /// 
@@ -767,7 +767,7 @@ pub mod sistema_de_votacion {
             let mut sistema = SistemaDeVotacion::new();            
             sistema.crear_eleccion(String::from("CEO de Intel"), 15, 01, 2024, 20, 02, 2024);
             sistema.crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 04, 2024);
-            sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
             sistema.postulacion_de_usuario(1,1,false);
             sistema.postulacion_de_usuario(1,2,false);
             let res = sistema.eliminar_eleccion(2);
@@ -806,11 +806,11 @@ pub mod sistema_de_votacion {
         #[ink::test]
         fn crear_usuarios(){
             let mut sistema = SistemaDeVotacion::new();
-            sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));
-            sistema.crear_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));
-            sistema.crear_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));
-            sistema.crear_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));
-            sistema.crear_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));
+            sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));
+            sistema.registrar_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));
+            sistema.registrar_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));
+            sistema.registrar_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));
+            sistema.registrar_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));
             assert_eq!(sistema.usuarios_registrados.len(),5);
         }
 
@@ -819,11 +819,11 @@ pub mod sistema_de_votacion {
             let mut sistema = SistemaDeVotacion::new();
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 05, 2024, 20, 06, 2024);
             let res = sistema.crear_eleccion(String::from("CEO de X"), 15, 07, 2024, 20, 08, 2024);
-            sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));
-            sistema.crear_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));
-            sistema.crear_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));
-            sistema.crear_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));
-            sistema.crear_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));
+            sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));
+            sistema.registrar_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));
+            sistema.registrar_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));
+            sistema.registrar_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));
+            sistema.registrar_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));
             let aux = sistema.obtener_eleccion(2);
             assert_eq!(aux.unwrap().cargo,sistema.elecciones[1].cargo);
         }
@@ -833,7 +833,7 @@ pub mod sistema_de_votacion {
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_720_210_000_000);
             let mut sistema = SistemaDeVotacion::new();
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 10, 2024, 20, 11, 2024);//elec 1
-            sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
             sistema.postulacion_de_usuario(1,1,false);
             assert_eq!(sistema.elecciones[0].postulados_a_candidatos[0].dato.nombre,String::from("Carlos"));
         }
@@ -842,7 +842,7 @@ pub mod sistema_de_votacion {
         fn vallidacion_de_usuario(){
             let mut sistema = SistemaDeVotacion::new();
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 11, 2024, 20, 12, 2024);//elec 1
-            sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
             sistema.postulacion_de_usuario(1,1,false);
             sistema.validar_usuario(1, 1, true);
             assert_eq!(sistema.elecciones[0].candidatos[0].dato.nombre,String::from("Carlos"));
@@ -854,19 +854,19 @@ pub mod sistema_de_votacion {
             let mut sistema = SistemaDeVotacion::new();
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 07, 2024, 20, 07, 2024);//elec 1
             let res = sistema.crear_eleccion(String::from("CEO de X"), 2, 03, 2024, 20, 07, 2024);//elec 2
-            sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
             sistema.postulacion_de_usuario(1,1,false);
             sistema.postulacion_de_usuario(1,2,true);
-            sistema.crear_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));//user2
+            sistema.registrar_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));//user2
             sistema.postulacion_de_usuario(2,1,false);
             sistema.postulacion_de_usuario(2,2,true);
-            sistema.crear_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));//user3
+            sistema.registrar_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));//user3
             sistema.postulacion_de_usuario(3,1,true);
             sistema.postulacion_de_usuario(3,2,true);
-            sistema.crear_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));//user4
+            sistema.registrar_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));//user4
             sistema.postulacion_de_usuario(4,1,true);
             sistema.postulacion_de_usuario(4,2,false);
-            sistema.crear_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));//user5
+            sistema.registrar_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));//user5
             sistema.postulacion_de_usuario(5,1,true);
             sistema.postulacion_de_usuario(5,2,false);
             sistema.validar_usuario(1, 1, true);
@@ -904,7 +904,7 @@ pub mod sistema_de_votacion {
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_719_900_000_000);
             let mut sistema = SistemaDeVotacion::new();
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 07, 2024, 20, 07, 2024);//elec 1
-            sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
             sistema.postulacion_de_usuario(1,1,false);
             let r = sistema.postulacion_de_usuario(1,1,true);
             match res {
@@ -918,16 +918,16 @@ pub mod sistema_de_votacion {
         fn probar_votar_fuera_de_fecha(){
             let mut sistema = SistemaDeVotacion::new();
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 12, 2024, 20, 12, 2024);//elec 1
-            sistema.crear_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
             sistema.postulacion_de_usuario(1,1,false);
-            sistema.crear_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));//user2
+            sistema.registrar_usuario(String::from("Pablo"), String::from("Gonzales"),String::from("1234567"));//user2
             sistema.postulacion_de_usuario(2,1,false);
             sistema.postulacion_de_usuario(2,2,true);
-            sistema.crear_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));//user3
+            sistema.registrar_usuario(String::from("Jose"), String::from("Peres"),String::from("1928492"));//user3
             sistema.postulacion_de_usuario(3,1,true);
-            sistema.crear_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));//user4
+            sistema.registrar_usuario(String::from("Ana"), String::from("Erazo"),String::from("1245623"));//user4
             sistema.postulacion_de_usuario(4,1,true);
-            sistema.crear_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));//user5
+            sistema.registrar_usuario(String::from("Maria"), String::from("Leon"),String::from("43554456"));//user5
             sistema.postulacion_de_usuario(5,1,true);
             sistema.validar_usuario(1, 1, true);
             sistema.validar_usuario(2, 1, true);
@@ -998,7 +998,7 @@ pub mod sistema_de_votacion {
             let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             let mut sistema = SistemaDeVotacion::new();
-            sistema.crear_usuario(String::from("Juan"), String::from("Perez"), String::from("12345678"));
+            sistema.registrar_usuario(String::from("Juan"), String::from("Perez"), String::from("12345678"));
             sistema.crear_eleccion(String::from("Presidente"),1, 1, 2024,10, 1, 2024,);
             sistema.postulacion_de_usuario(1, 1, true);
             let eleccion = sistema.obtener_eleccion(1).unwrap();
