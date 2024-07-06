@@ -559,12 +559,15 @@ pub mod sistema_de_votacion {
         /// ```
         /// 
         #[ink(message)]
-        pub fn get_reporte_de_eleccion(&self, id_eleccion:i16)->Option<Eleccion>{
-            if self.reportes_con_permiso.contains(&Self::env().caller())  && self.existe_eleccion(id_eleccion){
-                let eleccion = self.elecciones.get(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
-                return Some(eleccion.clone())
+        pub fn get_reporte_de_eleccion(&self, id_eleccion:i16)->Result<Eleccion, String>{
+            if !self.reportes_con_permiso.contains(&Self::env().caller()){
+                return Err(String::from("El reporte no tiene permiso para generar el reporte"));
             }
-            None
+            if !self.existe_eleccion(id_eleccion){
+                return Err(String::from("No existe la elecion"));
+            }
+            let eleccion = self.elecciones.get(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
+            Ok(eleccion.clone())
         }
 
         /// - Aprueba un reporte que pidio permiso para acceder al sistema. el parametro es usado para acceder al permiso por orden de llegada.
@@ -578,13 +581,41 @@ pub mod sistema_de_votacion {
         /// ```
         /// 
         #[ink(message)]
-        pub fn aprobar_reporte(&mut self,id:i16)->bool{
-            if self.reporte_sin_permiso.len()>=id as usize && id > 0 &&Self::env().caller() ==self.admin.accountid{
-                let accountid=self.reporte_sin_permiso.remove((id.checked_sub(1).unwrap())as usize);
-                self.reportes_con_permiso.push(accountid);
-                return true
+        pub fn aprobar_reporte(&mut self,id:i16)->Result<(), String>{
+            if self.reporte_sin_permiso.len()<id as usize{
+                return Err(String::from("El id proporcionado no es valido"));
             }
-            false
+            if id > 0 &&Self::env().caller() != self.admin.accountid{
+                return Err(String::from("No tiene permiso de administrador"));
+            }
+            
+            let account = self.reporte_sin_permiso.remove((id.checked_sub(1).unwrap())as usize);
+            self.reportes_con_permiso.push(account);
+            Ok(())
+        }
+        
+
+        /// - Rechaza un reporte que pidio permiso para acceder al sistema. el parametro es usado para acceder al permiso por orden de llegada.
+        /// - EJEMPLO:
+        /// ```
+        /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
+        /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+        /// ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+        /// let mut sistema = SistemaDeVotacion::new();
+        /// let r = sistema.rechazar_reporte(3);
+        /// ```
+        /// 
+        #[ink(message)]
+        pub fn rechazar_reporte(&mut self,id:i16)->Result<(), String>{
+            if self.reporte_sin_permiso.len()<id as usize{
+                return Err(String::from("El id proporcionado no es valido"));
+            }
+            if id > 0 &&Self::env().caller() != self.admin.accountid{
+                return Err(String::from("No tiene permiso de administrador"));
+            }
+            
+            self.reporte_sin_permiso.remove((id.checked_sub(1).unwrap())as usize);
+            Ok(())
         }
 
         /// - Agrega al sistema la peticion de permiso de un reporte para poder acceder.
@@ -632,7 +663,7 @@ pub mod sistema_de_votacion {
         #[ink(message)]
         pub fn get_reportes_aprobados(&self)->Result<Vec<AccountId>,String>{
             let account = Self::env().caller();
-            if account != self.admin.accountid || !self.reportes_con_permiso.contains(&account){
+            if account != self.admin.accountid && !self.reportes_con_permiso.contains(&account){
                 return Err(String::from("No tiene permisos"));
             }
             let reporte=self.reportes_con_permiso.clone();
@@ -820,7 +851,7 @@ pub mod sistema_de_votacion {
             assert_eq!(user.unwrap().datos.nombre,String::from("Carlos"));
             assert_eq!(usuarios_registrados.len(),5);
             assert_eq!(todas_las_elecciones.len(),2);
-            assert!(reporte_de_eleccion.is_none());
+            assert!(reporte_de_eleccion.is_err());
         }
 
         #[ink::test]
@@ -940,8 +971,9 @@ pub mod sistema_de_votacion {
             sistema.set_accountid_de_reporte(accounts.bob);
 
             let result = sistema.aprobar_reporte(1);
+            
 
-            assert!(result);
+            assert!(result.is_ok());
             assert!(sistema.esta_reporte_aprobado(accounts.bob));
         }
 
@@ -954,7 +986,7 @@ pub mod sistema_de_votacion {
 
             let result = sistema.aprobar_reporte(2); 
 
-            assert!(!result);
+            assert!(result.is_err());
             assert!(!sistema.esta_reporte_aprobado(accounts.bob));
         }
 
@@ -992,6 +1024,31 @@ pub mod sistema_de_votacion {
             vec_normal.push(accounts.django);
          
             assert_eq!(reportes_aprobados, vec_normal);
+        }
+
+        #[ink::test]
+        fn test_get_reportes_rechazados() {
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            sistema.set_accountid_de_reporte(accounts.frank);
+            sistema.set_accountid_de_reporte(accounts.django);
+            assert_eq!(sistema.reporte_sin_permiso.len(),2);
+            sistema.rechazar_reporte(1);
+            assert_eq!(sistema.reporte_sin_permiso.len(),1);
+        }
+
+        #[ink::test]
+        fn test_get_reportes_rechazados_sin_permisos() {
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            sistema.set_accountid_de_reporte(accounts.frank);
+            sistema.set_accountid_de_reporte(accounts.django);
+            assert_eq!(sistema.reporte_sin_permiso.len(),2);
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.bob);
+            sistema.rechazar_reporte(1);
+            assert_eq!(sistema.reporte_sin_permiso.len(),2);
         }
     }
     //cargo tarpaulin --target-dir src/coverage --skip-clean --exclude-files = target/debug/* --out html
