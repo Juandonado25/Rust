@@ -3,6 +3,7 @@
 #[ink::contract]
 mod reporte {
     use ink::prelude::vec::Vec;  
+    use ink::prelude::string::String;   
     use sistema_de_votacion::SistemaDeVotacionRef;
     
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
@@ -124,20 +125,19 @@ mod reporte {
                 Ok(dato) => dato,
                 Err(e) => return Err(e),
             };
-            if reporte.contains(&Self::env().caller()){
-                let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
-                let mut votantes=Votantes::new();
-                match eleccion {
-                    Some(elec) => {
-                        votantes.set_registrados(elec.get_postulados_a_votantes());
-                        votantes.set_aprobados(elec.get_votantes());
-                        return Some(votantes)
-                    }
-                    None=>None,
+            if !reporte.contains(&Self::env().caller()){
+                return Err(String::from("El contract no tiene permiso para obtener el reporte"));
+            };
+
+            let mut votantes=Votantes::new();
+            let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
+            match eleccion {
+                Ok(elec) => {
+                    votantes.set_registrados(elec.get_postulados_a_votantes());
+                    votantes.set_aprobados(elec.get_votantes());
+                    return Ok(votantes)
                 }
-            }
-            else {
-                None
+                Err(e)=> return Err(e),
             }
         }
         /// Reporta la cantidad de votos emitidos y el porcentaje de una eleccion que este cerrada, buscandola por el id pasado por parametro
@@ -145,8 +145,8 @@ mod reporte {
         ///   - `id_eleccion`: El ID de la elección para la cual se desea obtener el reporte de participación.
         ///
         /// - Devuelve:
-        ///   - `Some(Participacion)`: Una instancia de la estructura `Participacion` con la cantidad de votos emitidos y el porcentaje de votación.
-        ///   - `None`: Si no se encuentra el reporte de elección o el llamador no está en la lista de reportes aprobados.
+        ///   - `Result(Participacion)`: Una instancia de la estructura `Participacion` con la cantidad de votos emitidos y el porcentaje de votación.
+        ///   - `Err(String): Si no se encuentra el reporte de elección o el llamador no está en la lista de reportes aprobados.
         /// ## Ejemplo de uso
         ///
         /// Supongamos que tenemos un contrato de votación con varios reportes de elección. Aquí está un ejemplo simplificado:
@@ -165,24 +165,26 @@ mod reporte {
         /// }
         /// ```
         #[ink(message)]
-        pub fn reporte_de_participacion(&self,id_eleccion:i16) -> Option<Participacion>{
+        pub fn reporte_de_participacion(&self,id_eleccion:i16) -> Result<Participacion,String>{
             let reporte=self.sistema_de_votacion.get_reportes_aprobados();
-            if reporte.contains(&Self::env().caller()){
-                let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
-                let mut participacion=Participacion::new();
-                match eleccion {
-                    Some(elec) => {
-                        let cantidad=elec.get_cantidad_de_votos_emitidos();
-                        participacion.set_cantidad_votos_emitidos(cantidad);
-                        let porcentaje=elec.get_cantidad_de_votantes()/cantidad;
-                        participacion.set_porcentaje_de_votacion(porcentaje);
-                        return Some(participacion)
-                    }
-                    None=>return None,
+            let reporte = match reporte{
+                Ok(dato) => dato,
+                Err(e) => return Err(e),
+            };
+            if !reporte.contains(&Self::env().caller()){
+                return Err(String::from("El contract no tiene permiso para obtener el reporte"));
+            };
+            let mut participacion=Participacion::new();
+            let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
+            match eleccion {
+                Ok(elec) => {
+                    let cantidad=elec.get_cantidad_de_votos_emitidos();
+                    participacion.set_cantidad_votos_emitidos(cantidad);
+                    let porcentaje=elec.get_cantidad_de_votantes().checked_div(cantidad).unwrap();
+                    participacion.set_porcentaje_de_votacion(porcentaje);
+                    return Ok(participacion)
                 }
-            }
-            else {
-                None
+                Err(e)=>return Err(e),
             }
         }
         /// Reporte de resultados, muestra los datos de los candidatos de manera descendente 
@@ -208,21 +210,25 @@ mod reporte {
         /// }
         /// ```
         #[ink(message)]
-        pub fn reporte_de_resultado(&self,id_eleccion:i16) -> Option<Vec<sistema_de_votacion::sistema_de_votacion::Candidato>>{
+        pub fn reporte_de_resultado(&self,id_eleccion:i16) -> Result<Vec<sistema_de_votacion::sistema_de_votacion::Candidato>,String>{
             let reporte=self.sistema_de_votacion.get_reportes_aprobados();
-            if reporte.contains(&Self::env().caller()){
-                let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
-                let mut resultado: Vec<sistema_de_votacion::sistema_de_votacion::Candidato>=Vec::new();
-                match eleccion {
-                    Some(elec) => {
-                        resultado=elec.get_candidatos();
-                        resultado.sort_unstable_by_key(|candi| candi.get_cantidad_votos());
-                        return Some(resultado)
-                    }
-                    None=> return None,
+            let reporte = match reporte{
+                Ok(dato) => dato,
+                Err(e) => return Err(e),
+            };
+            if !reporte.contains(&Self::env().caller()){
+                return Err(String::from("El contract no tiene permiso para obtener el reporte"));
+            };
+
+            let mut resultado: Vec<sistema_de_votacion::sistema_de_votacion::Candidato>=Vec::new();
+            let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
+            match eleccion {
+                Ok(elec) => {
+                    resultado=elec.get_candidatos();
+                    resultado.sort_unstable_by_key(|candi| candi.get_cantidad_votos());
+                    return Ok(resultado)
                 }
-            }else {
-                None
+                Err(e)=> return Err(e),
             }
         }
         
