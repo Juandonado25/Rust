@@ -360,10 +360,12 @@ pub mod sistema_de_votacion {
             }
         }
 
+        ///devuelve true si el año es biciesto.
         fn es_bisiesto(anio: i32) -> bool {
             (anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0)
         }
         
+        /// Devuelve la cantidad de dias del mes pasado por parametro.
         fn dias_en_mes(anio: i32, mes: i32) -> i32 {
             match mes {
                 1 => 31,
@@ -382,6 +384,7 @@ pub mod sistema_de_votacion {
             }
         }
         
+        ///Calcula los dias desde 1970.
         fn dias_desde_1970_hasta_anio(anio: i32) -> Result<i32, &'static str> {
             let mut dias: i32 = 0;
             for a in 1970..anio {
@@ -391,6 +394,7 @@ pub mod sistema_de_votacion {
             Ok(dias)
         }
         
+        ///Calcula el timestamp en milisegundos.
         fn timestamp(anio: i32, mes: i32, dia: i32, hora: i32, minuto: i32, segundo: i32, milisegundos: i32) -> Result<i64, &'static str> {
             let dias_desde_1970 = Self::dias_desde_1970_hasta_anio(anio)?;
 
