@@ -860,7 +860,7 @@ pub mod sistema_de_votacion {
         }
 
         #[ink::test]
-        fn verificar_que_un_usuario_no_se_puede_postular_a_ambos_roles_en_una__eleccion(){
+        fn verificar_que_un_usuario_no_se_puede_postular_a_ambos_roles_en_una_eleccion(){
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_719_900_000_000);
             let mut sistema = SistemaDeVotacion::new();
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 07, 2024, 20, 07, 2024);//elec 1

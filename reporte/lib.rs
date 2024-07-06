@@ -85,9 +85,13 @@ mod reporte {
         /// 
         ///Obtiene una eleccion del sistema(se le pasa el id de una eleccion y busca si existe), tiene que estar cerrada
         #[ink(message)]
-        pub fn get_reporte_de_eleccion(&self,id_eleccion:i16) -> Option<sistema_de_votacion::sistema_de_votacion::Eleccion>{
+        pub fn get_reporte_de_eleccion(&self,id_eleccion:i16) -> Result<sistema_de_votacion::sistema_de_votacion::Eleccion, String>{
             let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
-            eleccion
+            let eleccion = match eleccion{
+                Ok(dato) => dato,
+                Err(e) => return Err(e),
+            };
+            Ok(eleccion)
         }
 
         /// Reporta los votantes registrados y aprobados de una eleccion de una eleccion cerrada, se le pasa por parametro el id de la eleccion a reportar
@@ -95,8 +99,8 @@ mod reporte {
         ///   - `id_eleccion`: El ID de la elección para la cual se desea obtener el reporte.
         ///
         /// - Devuelve:
-        ///   - `Some(Votantes)`: Una instancia de la estructura `Votantes` con los votantes registrados y aprobados.
-        ///   - `None`: Si no se encuentra el reporte de elección o el llamador no está en la lista de reportes aprobados.
+        ///   - `OK(Votantes)`: Una instancia de la estructura `Votantes` con los votantes registrados y aprobados.
+        ///   - `Err(String): Si no se encuentra el reporte de elección o el llamador no está en la lista de reportes aprobados.
         ///
         /// ## Ejemplo de uso
         ///
@@ -114,8 +118,12 @@ mod reporte {
         /// }
         /// ```
         #[ink(message)]
-        pub fn reporte_de_eleccion(&self,id_eleccion:i16) ->Option<Votantes>{
+        pub fn reporte_de_eleccion(&self,id_eleccion:i16) ->Result<Votantes,String>{
             let reporte=self.sistema_de_votacion.get_reportes_aprobados();
+            let reporte = match reporte{
+                Ok(dato) => dato,
+                Err(e) => return Err(e),
+            };
             if reporte.contains(&Self::env().caller()){
                 let eleccion = self.sistema_de_votacion.get_reporte_de_eleccion(id_eleccion);
                 let mut votantes=Votantes::new();
