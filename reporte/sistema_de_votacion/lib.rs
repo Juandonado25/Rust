@@ -536,6 +536,10 @@ pub mod sistema_de_votacion {
             let id_user = id_usuario.checked_sub(1).unwrap();
             let id_elec = id_eleccion.checked_sub(1).unwrap();
 
+            if id_usuario as usize > self.usuarios_registrados.len() || id_usuario<0{
+                return Err(String::from("Id de usuario invalido"));
+            }
+
             if Self::env().caller() !=self.usuarios_registrados[id_user as usize].datos.accountid{
                 return Err(String::from("No es el usuario quien intenta votar "));
             }
