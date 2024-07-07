@@ -38,9 +38,9 @@ pub mod sistema_de_votacion {
             self.votantes.len() as i16
         }
         pub fn get_cantidad_de_votos_emitidos(&self)->i16{
-            let mut cantidad=0;
+            let mut cantidad:i16=0;
             for i in &self.candidatos{
-                cantidad=i.cant_votos;
+                cantidad = cantidad.checked_add(i.cant_votos).unwrap();
             }
             cantidad
         }
@@ -616,16 +616,12 @@ pub mod sistema_de_votacion {
             let eleccion = self.elecciones.get_mut(id_eleccion.checked_sub(1).unwrap() as usize);
             let eleccion = match eleccion{
                 Some(dato) => dato,
-                None => return Err(String::from("No tiene permiso de administrador")),
+                None => return Err(String::from("No se enceuntra la eleccion ")),
             };
-            let votante = Votante::new(self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.clone());
+            let dato_votante = self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.clone();
 
             if Self::env().caller() !=self.usuarios_registrados[id_usuario.checked_sub(1).unwrap() as usize].datos.accountid {
-                return Err(String::from("No tiene permiso de administrador"));
-            }
-            
-            if !eleccion.votantes.contains(&votante){
-                return Err(String::from("No contiene este votante "));
+                return Err(String::from("No tiene permiso de usuario "));
             }
 
             if (eleccion.candidatos.len() as i16) < id_candidato{
@@ -639,8 +635,17 @@ pub mod sistema_de_votacion {
                 return Err(error_message);
             }
             
-            eleccion.candidatos[id_candidato.checked_sub(1).unwrap() as usize].cant_votos = eleccion.candidatos[id_candidato.checked_sub(1).unwrap() as usize].cant_votos.checked_add(1).unwrap();
-            Ok(())
+            
+            for (index, e) in eleccion.votantes.clone().iter().enumerate(){
+                if (*e).dato==dato_votante && !(*e).estado_del_voto{
+                    eleccion.votantes[index].estado_del_voto = true;
+                    eleccion.candidatos[id_candidato.checked_sub(1).unwrap() as usize].cant_votos = eleccion.candidatos[id_candidato.checked_sub(1).unwrap() as usize].cant_votos.checked_add(1).unwrap();
+                    return Ok(());
+                }else if (*e).dato==dato_votante && (*e).estado_del_voto{
+                    return Err(String::from("El votante ya voto"));
+                }
+            }
+            return Err(String::from("No contiene este votante "));
         }
 
         //METODOS DEL REPORTE
@@ -906,13 +911,18 @@ pub mod sistema_de_votacion {
             let reporte_de_eleccion = sistema.obtener_reporte_de_eleccion(1);
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_719_900_000_000);
             let res = sistema.votar_a_candidato(3, 1, 2);
-            let res = sistema.votar_a_candidato(4, 1, 2);
-            let res = sistema.votar_a_candidato(5, 1, 2);
-            let cant_votos = sistema.elecciones[0].candidatos[0].get_cantidad_votos();
-                match res {
+            let res = sistema.votar_a_candidato(3, 1, 2);
+            let res = sistema.votar_a_candidato(1, 1, 2);
+            match res {
                 Ok(()) => ink::env::debug_message("SE PUEDE "),
                 Err(ref e) => ink::env::debug_message(&e),
             }
+            let res = sistema.votar_a_candidato(4, 1, 2);
+            let res = sistema.votar_a_candidato(5, 1, 2);
+            let cant = sistema.elecciones[0].get_cantidad_de_votos_emitidos();
+            assert_eq!(cant,3);
+            let cant_votos = sistema.elecciones[0].candidatos[0].get_cantidad_votos();
+                
             assert_eq!(sistema.elecciones[0].candidatos[1].cant_votos,3);
             assert_eq!(user.unwrap().datos.nombre,String::from("Carlos"));
             assert_eq!(usuarios_registrados.len(),5);
@@ -1187,6 +1197,8 @@ pub mod sistema_de_votacion {
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_900_900_000_000);
             let mut sistema = SistemaDeVotacion::new();
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 01, 2024, 20, 01, 2024);
+            sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            sistema.postulacion_de_usuario(1,1,false);
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 01, 2024, 20, 23, 2024);
             assert!(res.is_err());
             let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 01, 1969, 20, 02, 2024);
@@ -1197,12 +1209,18 @@ pub mod sistema_de_votacion {
             assert!(res.is_err());
             let res = sistema.obtener_reporte_de_eleccion(3);
             assert!(res.is_err());
+            let res = sistema.validar_usuario(1, 1, true);
+            assert!(res.is_err());
+            let res = sistema.validar_usuario(1, 2, true);
+            assert!(res.is_err());
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.charlie);
             let res = sistema.eliminar_eleccion(1);
             assert!(res.is_err());
             let res = sistema.obtener_reportes_aprobados();
             assert!(res.is_err());
             let res = sistema.obtener_reporte_de_eleccion(3);
+            assert!(res.is_err());
+            let res = sistema.validar_usuario(1, 1, true);
             assert!(res.is_err());
         }
     }
