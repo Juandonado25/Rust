@@ -170,10 +170,6 @@ pub mod sistema_de_votacion {
                 return Err(String::from("Fecha de fin invalida"));
             }
 
-            if anio_inicio>anio_fin||(anio_inicio==anio_fin&&mes_inicio>mes_fin)||(anio_inicio==anio_fin&&mes_inicio==mes_fin&&dia_inicio>=dia_fin){
-                return Err(String::from("La fecha de inicio debe ser anterior a la fecha de fin"));
-            }
-
             let fecha_de_inicio = Self::timestamp(anio_inicio, mes_inicio, dia_inicio, 0, 0, 0,0);
             let fecha_de_inicio = match fecha_de_inicio {
                 Ok(dato) => dato,
@@ -493,8 +489,12 @@ pub mod sistema_de_votacion {
         }
         
         ///Calcula el timestamp en milisegundos.
-        fn timestamp(anio: i32, mes: i32, dia: i32, hora: i32, minuto: i32, segundo: i32, milisegundos: i32) -> Result<i64, &'static str> {
+        fn timestamp(anio: i32, mes: i32, dia: i32, hora: i32, minuto: i32, segundo: i32, milisegundos: i32) -> Result<i64, String> {
             let dias_desde_1970 = Self::dias_desde_1970_hasta_anio(anio)?;
+
+            if anio<1970{
+                return Err(String::from("Año invalido"));
+            }
 
             let mut dias_hasta_mes: i32 = 0;
             for m in 1..mes {
@@ -719,9 +719,9 @@ pub mod sistema_de_votacion {
 
     #[cfg(test)]
     mod tests {
-        use core::panic;
+        
         use super::*;
-        use ink::env::{caller, test};
+        
 
         #[ink::test]
         fn ceder_admin_con_permiso_para_hacerlo(){
@@ -786,11 +786,11 @@ pub mod sistema_de_votacion {
         #[ink::test]
         fn eliminar_eleccion_valida(){
             let mut sistema = SistemaDeVotacion::new();            
-            sistema.crear_eleccion(String::from("CEO de Intel"), 15, 01, 2024, 20, 02, 2024);
-            sistema.crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 04, 2024);
-            sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
-            sistema.postulacion_de_usuario(1,1,false);
-            sistema.postulacion_de_usuario(1,2,false);
+            let _ = sistema.crear_eleccion(String::from("CEO de Intel"), 15, 01, 2024, 20, 02, 2024);
+            let _ = sistema.crear_eleccion(String::from("CEO de X"), 15, 03, 2024, 20, 04, 2024);
+            let _ = sistema.registrar_usuario(String::from("Carlos"), String::from("Sanchez"),String::from("7654456"));//user 1
+            let _ = sistema.postulacion_de_usuario(1,1,false);
+            let _ = sistema.postulacion_de_usuario(1,2,false);
             let res = sistema.eliminar_eleccion(2);
             assert!(res.is_ok());
             assert_eq!(sistema.elecciones.len(),1);
@@ -1070,7 +1070,7 @@ pub mod sistema_de_votacion {
         fn test_existe_usuario_id_cero() {
             let accounts =  ink::env::test::default_accounts::< ink::env::DefaultEnvironment>();
             ink::env::test::set_caller::< ink::env::DefaultEnvironment>(accounts.alice);
-            let mut sistema = SistemaDeVotacion::new();
+            let sistema = SistemaDeVotacion::new();
             assert_eq!(sistema.existe_usuario(0), false, "El ID 0 debería ser inválido.");
         }
 
@@ -1178,6 +1178,28 @@ pub mod sistema_de_votacion {
                 Err(ref e) => ink::env::debug_message(&e),
             }
             assert!(res.is_err())
+        }
+
+        #[ink::test]
+        fn probando_errores(){
+            let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
+            ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_900_900_000_000);
+            let mut sistema = SistemaDeVotacion::new();
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 01, 2024, 20, 23, 2024);//elec 1
+            assert!(res.is_err());
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 01, 1969, 20, 02, 2024);//elec 1
+            assert!(res.is_err());
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 03, 2024, 20, 02, 2024);//elec 1
+            assert!(res.is_err());
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 03, 2024, 20, 02, 1969);//elec 1
+            assert!(res.is_err());
+            let res = sistema.eliminar_eleccion(24);
+            match res {
+                Ok(_) => ink::env::debug_message("SE PUEDE "),
+                Err(ref e) => ink::env::debug_message(&e),
+            }
+            assert!(!res.is_err());
         }
     }
     //cargo tarpaulin --target-dir src/coverage --skip-clean --exclude-files = target/debug/* --out html
