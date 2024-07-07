@@ -232,9 +232,8 @@ pub mod sistema_de_votacion {
         fn existe_eleccion(&self,id:i16)->bool{
             if id==0{
                 false
-            }
-            else{
-                self.elecciones.len()>=id as usize
+            }else{
+                self.elecciones.len()>=(id as usize)
             }
         }
 
@@ -242,8 +241,7 @@ pub mod sistema_de_votacion {
         fn existe_usuario(&self,id:i16)->bool{
             if id==0{
                 false
-            }
-            else{
+            }else{
                 self.usuarios_registrados.len()>=id as usize
             }
         }
@@ -1067,6 +1065,20 @@ pub mod sistema_de_votacion {
             let result = sistema.existe_eleccion(1);
 
             assert!(!result);
+        }
+        #[ink::test]
+        fn test_existe_usuario_id_cero() {
+            let accounts =  ink::env::test::default_accounts::< ink::env::DefaultEnvironment>();
+            ink::env::test::set_caller::< ink::env::DefaultEnvironment>(accounts.alice);
+            let mut sistema = SistemaDeVotacion::new();
+            assert_eq!(sistema.existe_usuario(0), false, "El ID 0 debería ser inválido.");
+        }
+
+        #[ink::test]
+        fn test_existe_eleccion_id_cero() {
+            let sistema = SistemaDeVotacion::new();
+            let resultado = sistema.existe_eleccion(0);
+            assert_eq!(resultado, false);
         }
 
         #[ink::test]
