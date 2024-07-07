@@ -1186,20 +1186,24 @@ pub mod sistema_de_votacion {
             ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(1_900_900_000_000);
             let mut sistema = SistemaDeVotacion::new();
-            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 01, 2024, 20, 23, 2024);//elec 1
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 01, 2024, 20, 01, 2024);
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 01, 2024, 20, 23, 2024);
             assert!(res.is_err());
-            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 01, 1969, 20, 02, 2024);//elec 1
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 01, 1969, 20, 02, 2024);
             assert!(res.is_err());
-            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 03, 2024, 20, 02, 2024);//elec 1
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 03, 2024, 20, 02, 2024);
             assert!(res.is_err());
-            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 03, 2024, 20, 02, 1969);//elec 1
+            let res = sistema.crear_eleccion(String::from("CEO de Intel"), 01, 03, 2024, 20, 02, 1969);
             assert!(res.is_err());
-            let res = sistema.eliminar_eleccion(24);
-            match res {
-                Ok(_) => ink::env::debug_message("SE PUEDE "),
-                Err(ref e) => ink::env::debug_message(&e),
-            }
-            assert!(!res.is_err());
+            let res = sistema.obtener_reporte_de_eleccion(3);
+            assert!(res.is_err());
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(accounts.charlie);
+            let res = sistema.eliminar_eleccion(1);
+            assert!(res.is_err());
+            let res = sistema.obtener_reportes_aprobados();
+            assert!(res.is_err());
+            let res = sistema.obtener_reporte_de_eleccion(3);
+            assert!(res.is_err());
         }
     }
     //cargo tarpaulin --target-dir src/coverage --skip-clean --exclude-files = target/debug/* --out html
