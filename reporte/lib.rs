@@ -5,10 +5,19 @@ mod reporte {
     use ink::prelude::vec::Vec;  
     use ink::prelude::string::String;   
     use sistema_de_votacion::SistemaDeVotacionRef;
-    use sistema_de_votacion::sistema_de_votacion::MockSistemaDeVotacion;
-    use mockall::predicate;
+    use mockall::predicate::*;
     use mockall::automock;
-    
+
+// Define una estructura que implementa el trait
+struct MockSistemaDeVotacion;
+
+impl SistemaDeVotacionTrait for MockSistemaDeVotacion {
+    fn newtrait() -> SistemaDeVotacionRef {
+        // Implement the logic to create an instance of SistemaDeVotacion
+        SistemaDeVotacionRef::new()  // Adjust this based on your actual implementation
+    }
+    // Implementa otros métodos requeridos por el trait
+}
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
         feature = "std",
@@ -73,10 +82,9 @@ mod reporte {
     impl Reporte {
         /// instancia de el reporte
         #[ink(constructor)]
-        pub fn new(sistema_de_votacion:SistemaDeVotacionRef) -> Self {    
+        pub fn new(sistema_de_votacion:SistemaDeVotacionRef) -> Self {   
             Self { sistema_de_votacion }
         }
-
         #[ink(constructor)]
         pub fn new_v2(sistema_de_votacion_code_hash: Hash) -> Self {
             let sistema_de_votacion = SistemaDeVotacionRef::new()
@@ -88,22 +96,6 @@ mod reporte {
             Self { sistema_de_votacion }
         }
 
-        /// Pide permiso para generar reportes.
-        #[ink(message)]
-        pub fn pedir_permiso_de_reportar(&mut self){
-            self.sistema_de_votacion.agregar_accountid_de_reporte(Self::env().caller());
-        }
-          /// Devuelve los datos de una eleccion, solo si esta esta cerrada y finalizada.
-        /// EJEMPLO
-        /// ```
-        /// use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
-        /// let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
-        /// ink::env::test::agregar_caller::<ink::env::DefaultEnvironment>(accounts.alice);
-        /// let sistema = SistemaDeVotacion::new();
-        /// let r = sistema.get_reporte_de_eleccion(3);
-        /// ```
-        /// 
-        ///Obtiene una eleccion del sistema(se le pasa el id de una eleccion y busca si existe), tiene que estar cerrada
         #[ink(message)]
         pub fn get_reporte_de_eleccion(&self,id_eleccion:i16) -> Result<sistema_de_votacion::sistema_de_votacion::Eleccion, String>{
             let eleccion = self.sistema_de_votacion.obtener_reporte_de_eleccion(id_eleccion);
@@ -114,29 +106,7 @@ mod reporte {
             Ok(eleccion)
         }
 
-        /// Reporta los votantes registrados y aprobados de una eleccion de una eleccion cerrada, se le pasa por parametro el id de la eleccion a reportar
-        /// - Parámetros:
-        ///   - `id_eleccion`: El ID de la elección para la cual se desea obtener el reporte.
-        ///
-        /// - Devuelve:
-        ///   - `OK(Votantes)`: Una instancia de la estructura `Votantes` con los votantes registrados y aprobados.
-        ///   - `Err(String): Si no se encuentra el reporte de elección o el llamador no está en la lista de reportes aprobados.
-        ///
-        /// ## Ejemplo de uso
-        ///
-        /// ```
-        /// // Crear una instancia del contrato de votación
-        /// let mut sistema = SistemaDeVotacion::new();
-        ///
-        /// // Obtener el reporte de elección con ID 42
-        /// let id_eleccion = 42;
-        /// if let Some(votantes_reporte) = sistema.reporte_de_eleccion(id_eleccion) {
-        ///     println!("Votantes registrados: {}", votantes_reporte.registrados);
-        ///     println!("Votantes aprobados: {}", votantes_reporte.aprobados);
-        /// } else {
-        ///     println!("No se encontró el reporte de elección.");
-        /// }
-        /// ```
+        
         #[ink(message)]
         pub fn reporte_de_eleccion(&self,id_eleccion:i16) ->Result<Votantes,String>{
             let reporte=self.sistema_de_votacion.obtener_reportes_aprobados();
@@ -159,30 +129,8 @@ mod reporte {
                 Err(e)=> return Err(e),
             }
         }
-        /// Reporta la cantidad de votos emitidos y el porcentaje de una eleccion que este cerrada, buscandola por el id pasado por parametro
-        /// - Parámetros:
-        ///   - `id_eleccion`: El ID de la elección para la cual se desea obtener el reporte de participación.
-        ///
-        /// - Devuelve:
-        ///   - `Result(Participacion)`: Una instancia de la estructura `Participacion` con la cantidad de votos emitidos y el porcentaje de votación.
-        ///   - `Err(String): Si no se encuentra el reporte de elección o el llamador no está en la lista de reportes aprobados.
-        /// ## Ejemplo de uso
-        ///
-        /// Supongamos que tenemos un contrato de votación con varios reportes de elección. Aquí está un ejemplo simplificado:
-        ///
-        /// ```
-        /// // Crear una instancia del contrato de votación
-        /// let mut sistema = SistemaDeVotacion::new();
-        ///
-        /// // Obtener el reporte de participación para la elección con ID 42
-        /// let id_eleccion = 42;
-        /// if let Some(participacion_reporte) = sistema.reporte_de_participacion(id_eleccion) {
-        ///     println!("Cantidad de votos emitidos: {}", participacion_reporte.cantidad_votos_emitidos);
-        ///     println!("Porcentaje de votación: {:.2}%", participacion_reporte.porcentaje_de_votacion * 100.0);
-        /// } else {
-        ///     println!("No se encontró el reporte de participación.");
-        /// }
-        /// ```
+
+
         #[ink(message)]
         pub fn reporte_de_participacion(&self,id_eleccion:i16) -> Result<Participacion,String>{
             let reporte=self.sistema_de_votacion.obtener_reportes_aprobados();
@@ -199,35 +147,14 @@ mod reporte {
                 Ok(elec) => {
                     let cantidad=elec.get_cantidad_de_votos_emitidos();
                     participacion.agregar_cantidad_votos_emitidos(cantidad);
-                    let porcentaje=elec.get_cantidad_de_votantes().checked_div(cantidad).unwrap();
+                    let porcentaje:i16=elec.get_cantidad_de_votantes().checked_div(cantidad).unwrap();
                     participacion.agregar_porcentaje_de_votacion(porcentaje);
                     return Ok(participacion)
                 }
                 Err(e)=>return Err(e),
             }
         }
-        /// Reporte de resultados, muestra los datos de los candidatos de manera descendente 
-        /// - Parámetros:
-        ///   - `id_eleccion`: El ID de la elección para la cual se desea obtener el reporte de resultados.
-        ///
-        /// - Devuelve:
-        ///   - `Some(Vec<Candidato>)`: Un vector de instancias de la estructura `Candidato`, ordenado por la cantidad de votos.
-        ///   - `None`: Si no se encuentra el reporte de elección o el llamador no está en la lista de reportes aprobados.
-        /// 
-        /// ```
-        /// // Crear una instancia del contrato de votación
-        /// let mut sistema = SistemaDeVotacion::new();
-        ///
-        /// // Obtener el reporte de resultados para la elección con ID 42
-        /// let id_eleccion = 42;
-        /// if let Some(resultados_reporte) = sistema.reporte_de_resultado(id_eleccion) {
-        ///     for candidato in resultados_reporte {
-        ///         println!("Candidato: {} - Votos: {}", candidato.nombre, candidato.cantidad_votos);
-        ///     }
-        /// } else {
-        ///     println!("No se encontró el reporte de resultados.");
-        /// }
-        /// ```
+        
         #[ink(message)]
         pub fn reporte_de_resultado(&self,id_eleccion:i16) -> Result<Vec<sistema_de_votacion::sistema_de_votacion::Candidato>,String>{
             let reporte=self.sistema_de_votacion.obtener_reportes_aprobados();
@@ -255,33 +182,34 @@ mod reporte {
          
     
     }
-    // #[cfg(test)]
-    // mod tests{
-    //     use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
-    //     use sistema_de_votacion::sistema_de_votacion::MockSistemaDeVotacion;
-    //     use mockall::predicate;
-    //     use mockall::automock;
 
-    //     use super::*;
-        
-    //     #[ink::test]
-    //     fn test_reporte() {
-    //         let constructor sistema = SistemaDeVotacionRef::new();
+    #[cfg(test)]
+    mod tests{
 
-    //         // Crea una instancia del contrato Reporte con el mock como sistema de votación
-    //         let reporte = Reporte::new(mock_sistema_de_votacion);
+        use super::*;
+        #[ink::test]
+        fn test_new_reporte() {
+            // Crea un mock de SistemaDeVotacion
+            let mock_sistema = MockSistemaDeVotacion::newtrait();
+    
+            // Crea una instancia de Reporte utilizando el mock
+            let reporte = Reporte::new(mock_sistema);
+    
+            // Verifica que el campo sistema_de_votacion se haya inicializado correctamente
+            // (puedes agregar más aserciones según tus necesidades)
+            assert_eq!(reporte.sistema_de_votacion, mock_sistema);
+        }
 
-    //         // Realiza las pruebas necesarias...
-    //     }
-    // }
+    } 
 
     #[cfg(all(test, feature = "e2e-tests"))]
-    mod e2e_tests{
+    mod e2e_tests {
+
         use super::*;
         use ink_e2e::ContractsBackend;
-
+        
         type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
+    
         #[ink_e2e::test]
         async fn test_reporte_de_participacion<Client: E2EBackend>(mut client: Client) -> E2EResult<()> {
             // given
@@ -290,27 +218,36 @@ mod reporte {
                 .submit()
                 .await
                 .expect("sistema_de_votacion upload failed");
-
+    
             let mut constructor = ReporteRef::new_v2(sistema_de_votacion_code.code_hash);
             let contract = client
                 .instantiate("reporte", &ink_e2e::alice(), &mut constructor)
                 .submit()
                 .await
                 .expect("reporte instantiate failed");
+    
             let mut call_builder = contract.call_builder::<Reporte>();
             let call = call_builder.reporte_de_participacion(1);
-
+    
             // when
             let result = client
                 .call(&ink_e2e::alice(), &call)
                 .submit()
                 .await
-                .expect("Calling `reporte_de_participcion` failed")
+                .expect("Calling `reporte_de_participacion` failed")
                 .return_value();
-
-            assert!(result.is_err());
-
+    
+            // then
+            assert!(result.is_ok());
+    
+            if let Ok(participacion) = result {
+                assert_eq!(participacion.cantidad_votos_emitidos, 100); // modificar segun lo que se espere
+                assert_eq!(participacion.porcentaje_de_votacion, 50); // modificar segun lo que se espere
+            }
+    
             Ok(())
         }
+    
     }
+
 }

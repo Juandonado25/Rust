@@ -5,37 +5,24 @@ pub mod sistema_de_votacion {
     use ink::prelude::string::ToString;
     use ink::prelude::string::String;   
     use ink::prelude::vec::Vec;
-    
-    trait SistemaDeVotacionTrait {
-        fn obtener_reporte_de_eleccion(&self, id_eleccion: i16) -> Result<Eleccion, String>;
+    use mockall::predicate::*;
+    use mockall::automock;
+    pub trait SistemaDeVotacionTrait {
+        fn newtrait() -> SistemaDeVotacionRef;
         // Otros métodos necesarios
     }
-    use mockall::automock; // Importa la macro automock
     use ink::codegen::StaticEnv;
-    
-    #[automock]
-impl SistemaDeVotacionTrait for SistemaDeVotacion {
-    fn obtener_reporte_de_eleccion(&self, id_eleccion: i16) -> Result<Eleccion, String> {
-        let account = Self::env().caller();
+    // Implementación correcta
+    impl SistemaDeVotacionTrait for SistemaDeVotacionRef {
+        fn newtrait() -> SistemaDeVotacionRef {
+            // Lógica de inicialización específica para SistemaDeVotacionRef
+            // Por ejemplo, puedes crear una instancia y devolverla
 
-        if account != self.admin.accountid && !self.reportes_con_permiso.contains(&account){
-            return Err(String::from("El reporte no tiene permiso para generar el reporte"));
+            // Ahora crea una instancia de SistemaDeVotacionRef con el campo inner correctamente inicializado
+            SistemaDeVotacionRef
         }
-
-        if !self.existe_eleccion(id_eleccion){
-            return Err(String::from("No existe la elecion"));
-        }
-
-        let eleccion = self.elecciones.get(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
-
-        if Self::env().block_timestamp()<eleccion.fin as u64{
-            return Err(String::from("La eleccion aun no ha cerrado"));
-        }
-        
-        Ok(eleccion.clone())
+        // Implementa otros métodos requeridos por el trait
     }
-}
-
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
         feature = "std",
@@ -174,9 +161,7 @@ impl SistemaDeVotacionTrait for SistemaDeVotacion {
                 elecciones:Vec::new(),
                 reporte_sin_permiso:Vec::new(),
                 reportes_con_permiso:Vec::new(),
-            }
-        }
-        
+
         //METODOS ADMINISTRADOR
 
         /// - Crea una eleccion y la agrega al sistema.
@@ -660,7 +645,7 @@ impl SistemaDeVotacionTrait for SistemaDeVotacion {
             
             if (Self::env().block_timestamp() < eleccion.inicio as u64) || (Self::env().block_timestamp() > eleccion.fin as u64) {
                 let block_timestamp = Self::env().block_timestamp();
-                let mut error_message = String::from("Votación fuera de fecha, timestamp del block: ");
+                let mut error_message = String::from("Votación fuera de fecha, timestamp del block actual: ");
                 error_message.push_str(&block_timestamp.to_string());
                 return Err(error_message);
             }
