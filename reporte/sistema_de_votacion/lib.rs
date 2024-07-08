@@ -161,7 +161,9 @@ pub mod sistema_de_votacion {
                 elecciones:Vec::new(),
                 reporte_sin_permiso:Vec::new(),
                 reportes_con_permiso:Vec::new(),
-
+            }
+        }
+    
         //METODOS ADMINISTRADOR
 
         /// - Crea una eleccion y la agrega al sistema.
