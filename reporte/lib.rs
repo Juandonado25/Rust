@@ -5,6 +5,9 @@ mod reporte {
     use ink::prelude::vec::Vec;  
     use ink::prelude::string::String;   
     use sistema_de_votacion::SistemaDeVotacionRef;
+    use sistema_de_votacion::sistema_de_votacion::MockSistemaDeVotacion;
+    use mockall::predicate;
+    use mockall::automock;
     
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
@@ -61,7 +64,6 @@ mod reporte {
             self.aprobados = aprobados;
         }
     }
-
     #[ink(storage)]
     pub struct Reporte {
         sistema_de_votacion:SistemaDeVotacionRef,
@@ -72,6 +74,17 @@ mod reporte {
         /// instancia de el reporte
         #[ink(constructor)]
         pub fn new(sistema_de_votacion:SistemaDeVotacionRef) -> Self {    
+            Self { sistema_de_votacion }
+        }
+
+        #[ink(constructor)]
+        pub fn new_v2(sistema_de_votacion_code_hash: Hash) -> Self {
+            let sistema_de_votacion = SistemaDeVotacionRef::new()
+                .code_hash(sistema_de_votacion_code_hash)
+                .endowment(0)
+                .salt_bytes([0xDE, 0xAD, 0xBE, 0xEF])
+                .instantiate();
+
             Self { sistema_de_votacion }
         }
 
@@ -242,25 +255,62 @@ mod reporte {
          
     
     }
-    #[cfg(test)]
-    mod tests{
-        use super::*;
-        #[ink::test]
-        fn instanciar_reporte() {
-        // Emular entorno de ejecución con cuentas predeterminadas
-        let accounts = ink::env::test::default_accounts::<ink::env::DefaultEnvironment>();
+    // #[cfg(test)]
+    // mod tests{
+    //     use sistema_de_votacion::sistema_de_votacion::SistemaDeVotacion;
+    //     use sistema_de_votacion::sistema_de_votacion::MockSistemaDeVotacion;
+    //     use mockall::predicate;
+    //     use mockall::automock;
+
+    //     use super::*;
         
-        // Crear una instancia del sistema de votación (simulado)
-        let sistema_de_votacion = sistema_de_votacion::SistemaDeVotacionRef::new();
+    //     #[ink::test]
+    //     fn test_reporte() {
+    //         let constructor sistema = SistemaDeVotacionRef::new();
 
-        // Convertir la instancia a una referencia del contrato
-        let sistema_de_votacion_ref = SistemaDeVotacionRef::sistema;
+    //         // Crea una instancia del contrato Reporte con el mock como sistema de votación
+    //         let reporte = Reporte::new(mock_sistema_de_votacion);
 
-        // Instanciar el contrato Reporte con la referencia al sistema de votación
-        let reporte = Reporte::new(sistema_de_votacion_ref);
+    //         // Realiza las pruebas necesarias...
+    //     }
+    // }
 
-        // Ejemplo de aserción: Verificar alguna propiedad del contrato Reporte
-        assert_eq!(reporte.sistema_de_votacion, sistema_de_votacion_ref);
-    }
+    #[cfg(all(test, feature = "e2e-tests"))]
+    mod e2e_tests{
+        use super::*;
+        use ink_e2e::ContractsBackend;
+
+        type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+        #[ink_e2e::test]
+        async fn test_reporte_de_participacion<Client: E2EBackend>(mut client: Client) -> E2EResult<()> {
+            // given
+            let sistema_de_votacion_code = client
+                .upload("sistema_de_votacion", &ink_e2e::alice())
+                .submit()
+                .await
+                .expect("sistema_de_votacion upload failed");
+
+            let mut constructor = ReporteRef::new_v2(sistema_de_votacion_code.code_hash);
+            let contract = client
+                .instantiate("reporte", &ink_e2e::alice(), &mut constructor)
+                .submit()
+                .await
+                .expect("reporte instantiate failed");
+            let mut call_builder = contract.call_builder::<Reporte>();
+            let call = call_builder.reporte_de_participacion(1);
+
+            // when
+            let result = client
+                .call(&ink_e2e::alice(), &call)
+                .submit()
+                .await
+                .expect("Calling `reporte_de_participcion` failed")
+                .return_value();
+
+            assert!(result.is_err());
+
+            Ok(())
+        }
     }
 }

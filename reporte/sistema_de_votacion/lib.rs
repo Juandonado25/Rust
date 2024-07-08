@@ -5,6 +5,36 @@ pub mod sistema_de_votacion {
     use ink::prelude::string::ToString;
     use ink::prelude::string::String;   
     use ink::prelude::vec::Vec;
+    
+    trait SistemaDeVotacionTrait {
+        fn obtener_reporte_de_eleccion(&self, id_eleccion: i16) -> Result<Eleccion, String>;
+        // Otros métodos necesarios
+    }
+    use mockall::automock; // Importa la macro automock
+    use ink::codegen::StaticEnv;
+    
+    #[automock]
+impl SistemaDeVotacionTrait for SistemaDeVotacion {
+    fn obtener_reporte_de_eleccion(&self, id_eleccion: i16) -> Result<Eleccion, String> {
+        let account = Self::env().caller();
+
+        if account != self.admin.accountid && !self.reportes_con_permiso.contains(&account){
+            return Err(String::from("El reporte no tiene permiso para generar el reporte"));
+        }
+
+        if !self.existe_eleccion(id_eleccion){
+            return Err(String::from("No existe la elecion"));
+        }
+
+        let eleccion = self.elecciones.get(id_eleccion.checked_sub(1).unwrap() as usize).unwrap();
+
+        if Self::env().block_timestamp()<eleccion.fin as u64{
+            return Err(String::from("La eleccion aun no ha cerrado"));
+        }
+        
+        Ok(eleccion.clone())
+    }
+}
 
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
