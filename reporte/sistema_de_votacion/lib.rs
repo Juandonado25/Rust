@@ -5,24 +5,7 @@ pub mod sistema_de_votacion {
     use ink::prelude::string::ToString;
     use ink::prelude::string::String;   
     use ink::prelude::vec::Vec;
-    use mockall::predicate::*;
-    use mockall::automock;
-    pub trait SistemaDeVotacionTrait {
-        fn newtrait() -> SistemaDeVotacionRef;
-        // Otros métodos necesarios
-    }
-    use ink::codegen::StaticEnv;
-    // Implementación correcta
-    impl SistemaDeVotacionTrait for SistemaDeVotacionRef {
-        fn newtrait() -> SistemaDeVotacionRef {
-            // Lógica de inicialización específica para SistemaDeVotacionRef
-            // Por ejemplo, puedes crear una instancia y devolverla
-
-            // Ahora crea una instancia de SistemaDeVotacionRef con el campo inner correctamente inicializado
-            SistemaDeVotacionRef
-        }
-        // Implementa otros métodos requeridos por el trait
-    }
+    
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
         feature = "std",
@@ -97,7 +80,7 @@ pub mod sistema_de_votacion {
                                 //si es true participa en esa eleccion, false si no. por ejemplo si pos1=true participa en la eleccion de id 1.
                                 //lo hacemos para no inscribir mas de una vez al usuario en una misma eleccion,
     }
-/////////////////A revisar inicializacion del vector
+
     impl Usuario{
         fn new(nombre:String, apellido:String, dni:String,accountid:AccountId, longitud:i16)->Self{
             Self{datos:Persona::new(nombre,apellido,dni,accountid),participacion:(0..longitud).map(|_| false).collect()}
@@ -1241,18 +1224,4 @@ pub mod sistema_de_votacion {
             assert!(res.is_err());
         }
     }
-    //cargo tarpaulin --target-dir src/coverage --skip-clean --exclude-files = target/debug/* --out html
-    
 }
-/*
-    Preguntas del planteamiento:
-        1- para registrarse como candidato se debe pedir mas datos ademas de su info personal? como años de antiguedad en la empresa o cantidad de titulos obtenidos.
-        2- desborde aritmetico, como se soluciona? usar #![allow(clippy::arithmetic_side_effects)] es valido?
-        
-    Preguntas del deploy:
-
-    
-    Notas:
-        !- Tener en cuenta que si la eleccion tiene un solo candidato no se va a poder inicializar y 
-        en el reporte se marcara como ganador al unico candidato. si no existe ningun candidato retornara eleccion invalida.
-*/

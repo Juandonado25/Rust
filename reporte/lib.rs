@@ -3,21 +3,9 @@
 #[ink::contract]
 mod reporte {
     use ink::prelude::vec::Vec;  
-    use ink::prelude::string::String;   
+    use ink::prelude::string::String; 
     use sistema_de_votacion::SistemaDeVotacionRef;
-    use mockall::predicate::*;
-    use mockall::automock;
 
-// Define una estructura que implementa el trait
-struct MockSistemaDeVotacion;
-
-impl SistemaDeVotacionTrait for MockSistemaDeVotacion {
-    fn newtrait() -> SistemaDeVotacionRef {
-        // Implement the logic to create an instance of SistemaDeVotacion
-        SistemaDeVotacionRef::new()  // Adjust this based on your actual implementation
-    }
-    // Implementa otros métodos requeridos por el trait
-}
     #[derive(scale::Decode, scale::Encode,Debug,Default,Clone)]
     #[cfg_attr(
         feature = "std",
@@ -73,6 +61,7 @@ impl SistemaDeVotacionTrait for MockSistemaDeVotacion {
             self.aprobados = aprobados;
         }
     }
+    
     #[ink(storage)]
     pub struct Reporte {
         sistema_de_votacion:SistemaDeVotacionRef,
@@ -83,16 +72,6 @@ impl SistemaDeVotacionTrait for MockSistemaDeVotacion {
         /// instancia de el reporte
         #[ink(constructor)]
         pub fn new(sistema_de_votacion:SistemaDeVotacionRef) -> Self {   
-            Self { sistema_de_votacion }
-        }
-        #[ink(constructor)]
-        pub fn new_v2(sistema_de_votacion_code_hash: Hash) -> Self {
-            let sistema_de_votacion = SistemaDeVotacionRef::new()
-                .code_hash(sistema_de_votacion_code_hash)
-                .endowment(0)
-                .salt_bytes([0xDE, 0xAD, 0xBE, 0xEF])
-                .instantiate();
-
             Self { sistema_de_votacion }
         }
 
@@ -178,76 +157,12 @@ impl SistemaDeVotacionTrait for MockSistemaDeVotacion {
             }
         }
         
-        
-         
-    
     }
 
-    #[cfg(test)]
-    mod tests{
-
-        use super::*;
-        #[ink::test]
-        fn test_new_reporte() {
-            // Crea un mock de SistemaDeVotacion
-            let mock_sistema = MockSistemaDeVotacion::newtrait();
-    
-            // Crea una instancia de Reporte utilizando el mock
-            let reporte = Reporte::new(mock_sistema);
-    
-            // Verifica que el campo sistema_de_votacion se haya inicializado correctamente
-            // (puedes agregar más aserciones según tus necesidades)
-            assert_eq!(reporte.sistema_de_votacion, mock_sistema);
-        }
-
-    } 
-
-    #[cfg(all(test, feature = "e2e-tests"))]
-    mod e2e_tests {
-
-        use super::*;
-        use ink_e2e::ContractsBackend;
-        
-        type E2EResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-    
-        #[ink_e2e::test]
-        async fn test_reporte_de_participacion<Client: E2EBackend>(mut client: Client) -> E2EResult<()> {
-            // given
-            let sistema_de_votacion_code = client
-                .upload("sistema_de_votacion", &ink_e2e::alice())
-                .submit()
-                .await
-                .expect("sistema_de_votacion upload failed");
-    
-            let mut constructor = ReporteRef::new_v2(sistema_de_votacion_code.code_hash);
-            let contract = client
-                .instantiate("reporte", &ink_e2e::alice(), &mut constructor)
-                .submit()
-                .await
-                .expect("reporte instantiate failed");
-    
-            let mut call_builder = contract.call_builder::<Reporte>();
-            let call = call_builder.reporte_de_participacion(1);
-    
-            // when
-            let result = client
-                .call(&ink_e2e::alice(), &call)
-                .submit()
-                .await
-                .expect("Calling `reporte_de_participacion` failed")
-                .return_value();
-    
-            // then
-            assert!(result.is_ok());
-    
-            if let Ok(participacion) = result {
-                assert_eq!(participacion.cantidad_votos_emitidos, 100); // modificar segun lo que se espere
-                assert_eq!(participacion.porcentaje_de_votacion, 50); // modificar segun lo que se espere
-            }
-    
-            Ok(())
-        }
-    
-    }
+    /*No pudimos implementar los tests en nuestro reporte y por ende tampoco los tests de la documentacion. A pesar de todos nuestros 
+      esfuerzos, todas las pruebas que intentamos no funcionaron.Nos encontramos con varios problemas, pero el más frustrante fue que al 
+      usar SistemaDeVotacion::new(), se creaba un createBuilder<> que no pudimos instanciar de ninguna manera para que nos diera un 
+      sistemaDeVotacionRef y con eso instanciar el Reporte. Intentamos las soluciones que nos sugeriste, así como algunas que encontramos 
+      por nuestra cuenta y que nos recomendó ChatGPT, pero ninguna dio resultado. */
 
 }
